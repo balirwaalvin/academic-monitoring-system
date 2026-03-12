@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, LogOut, ChevronDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import type { Notification } from '../../types';
 
@@ -22,10 +22,18 @@ const pageTitles: Record<string, string> = {
 };
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const qc = useQueryClient();
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    logout();
+    navigate('/login');
+  };
 
   const { data: notifData } = useQuery({
     queryKey: ['notifications'],
@@ -126,11 +134,39 @@ export default function Header() {
           )}
         </div>
 
-        {/* User avatar */}
-        <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-          <span className="text-primary-700 text-xs font-bold">
-            {user?.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-          </span>
+        {/* User avatar dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+              <span className="text-primary-700 text-xs font-bold">
+                {user?.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </span>
+            </div>
+            <span className="text-sm font-medium text-slate-700 hidden sm:block max-w-[120px] truncate">{user?.name}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+          </button>
+
+          {showUserMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+              <div className="absolute right-0 top-11 w-48 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden py-1">
+                <div className="px-4 py-2.5 border-b border-slate-100">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>
