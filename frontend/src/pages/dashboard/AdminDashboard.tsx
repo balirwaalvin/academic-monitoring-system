@@ -55,7 +55,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Fee Collection" value={`${collectionRate}%`} icon={<CreditCard className="w-5 h-5" />} color="green"
-          subtitle={`$${(overview?.feeCollection?.total_collected || 0).toLocaleString()} / $${(overview?.feeCollection?.total_billed || 0).toLocaleString()}`} />
+          subtitle={`UGX ${(overview?.feeCollection?.total_collected || 0).toLocaleString()} / UGX ${(overview?.feeCollection?.total_billed || 0).toLocaleString()}`} />
         <StatCard title="Total Classes" value={overview?.totalClasses || 0} icon={<School className="w-5 h-5" />} color="purple" />
         <StatCard title="Parents Registered" value={overview?.totalParents || 0} icon={<Users className="w-5 h-5" />} color="amber" />
         <StatCard title="Open Wellbeing" value={overview?.openWellbeing || 0} icon={<Heart className="w-5 h-5" />} color="purple" subtitle="Cases in progress" />

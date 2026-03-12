@@ -68,7 +68,7 @@ export default function ParentDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Overall Average" value={gradeSummary ? `${Math.round(gradeSummary.reduce((s, g) => s + g.overall_avg, 0) / Math.max(gradeSummary.length, 1))}%` : 'N/A'} icon={<BookOpen className="w-5 h-5" />} color="blue" />
         <StatCard title="Attendance Rate" value={`${attRate}%`} icon={<CalendarCheck className="w-5 h-5" />} color="green" subtitle={`${attStats?.overall?.absent || 0} days absent`} />
-        <StatCard title="Outstanding Fees" value={`$${totalBalance.toFixed(0)}`} icon={<CreditCard className="w-5 h-5" />} color={totalBalance > 0 ? 'red' : 'green'} />
+        <StatCard title="Outstanding Fees" value={`UGX ${totalBalance.toLocaleString()}`} icon={<CreditCard className="w-5 h-5" />} color={totalBalance > 0 ? 'red' : 'green'} />
         <StatCard title="Active Warnings" value={warnings?.length || 0} icon={<AlertTriangle className="w-5 h-5" />} color="amber" />
       </div>
 
@@ -105,7 +105,7 @@ export default function ParentDashboard() {
                 </div>
                 <div className="text-right">
                   <p className={`text-sm font-semibold ${f.payment_status === 'paid' ? 'text-green-600' : f.payment_status === 'overdue' ? 'text-red-600' : 'text-amber-600'}`}>
-                    {f.payment_status === 'paid' ? 'Paid' : `$${f.balance}`}
+                    {f.payment_status === 'paid' ? 'Paid' : `UGX ${f.balance.toLocaleString()}`}
                   </p>
                   <p className="text-xs text-slate-400 capitalize">{f.payment_status}</p>
                 </div>

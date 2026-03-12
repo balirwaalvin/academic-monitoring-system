@@ -200,26 +200,26 @@ async function initializeDatabase() {
     return r.lastID;
   };
 
-  const adminId     = await iu('Dr. Richard Osei',    'admin@school.edu',            'admin',     '+233-20-100-0001', '1 School Lane, Accra');
-  const t1Id        = await iu('Mrs. Sarah Johnson',  'sarah.johnson@school.edu',     'teacher',   '+233-20-100-0002', '12 Maple Ave, Accra');
-  const t2Id        = await iu('Mr. Michael Chen',    'michael.chen@school.edu',      'teacher',   '+233-20-100-0003', '34 Oak Street, Accra');
-  const t3Id        = await iu('Ms. Emily Davis',     'emily.davis@school.edu',       'teacher',   '+233-20-100-0004', '56 Pine Road, Accra');
-  const counselorId = await iu('Dr. Patricia Lee',    'counselor@school.edu',         'counselor', '+233-20-100-0005', '78 Cedar Ave, Accra');
-  const p1Id        = await iu('Mr. James Wilson',    'james.wilson@gmail.com',       'parent',    '+233-24-200-0001', '10 Rose Court, Accra');
-  const p2Id        = await iu('Mrs. Mary Brown',     'mary.brown@gmail.com',         'parent',    '+233-24-200-0002', '22 Tulip Drive, Accra');
-  const p3Id        = await iu('Mr. Robert Taylor',   'robert.taylor@gmail.com',      'parent',    '+233-24-200-0003', '44 Lily Lane, Accra');
-  const p4Id        = await iu('Mrs. Linda Martinez', 'linda.martinez@gmail.com',     'parent',    '+233-24-200-0004', '66 Daisy Road, Accra');
-  const p5Id        = await iu('Mr. David Anderson',  'david.anderson@gmail.com',     'parent',    '+233-24-200-0005', '88 Iris Street, Accra');
-  const p6Id        = await iu('Mrs. Susan Thompson', 'susan.thompson@gmail.com',     'parent',    '+233-24-200-0006', '100 Orchid Way, Accra');
-  const su1Id       = await iu('Emma Wilson',         'emma.wilson@student.edu',      'student',   null, '10 Rose Court, Accra');
-  const su2Id       = await iu('Liam Brown',          'liam.brown@student.edu',       'student',   null, '22 Tulip Drive, Accra');
-  const su3Id       = await iu('Sophia Taylor',       'sophia.taylor@student.edu',    'student',   null, '44 Lily Lane, Accra');
-  const su4Id       = await iu('Noah Martinez',       'noah.martinez@student.edu',    'student',   null, '66 Daisy Road, Accra');
-  const su5Id       = await iu('Olivia Anderson',     'olivia.anderson@student.edu',  'student',   null, '88 Iris Street, Accra');
-  const su6Id       = await iu('William Thompson',    'william.thompson@student.edu', 'student',   null, '100 Orchid Way, Accra');
-  const su7Id       = await iu('Ava Johnson',         'ava.johnson@student.edu',      'student',   null, '12 Maple Ave, Accra');
-  const su8Id       = await iu('James Chen',          'james.chen@student.edu',       'student',   null, '34 Oak Street, Accra');
-  const su9Id       = await iu('Charlotte Davis',     'charlotte.davis@student.edu',  'student',   null, '56 Pine Road, Accra');
+  const adminId     = await iu('Dr. Ssekandi Robert',       'admin@school.edu',                 'admin',     '+256-41-100-0001', 'Plot 1, Nakasero Road, Kampala');
+  const t1Id        = await iu('Mrs. Sarah Namaganda',      'sarah.namaganda@school.edu',        'teacher',   '+256-77-200-0002', 'Plot 12, Kololo Hill, Kampala');
+  const t2Id        = await iu('Mr. Michael Okello',        'michael.okello@school.edu',         'teacher',   '+256-77-200-0003', 'Plot 34, Ntinda, Kampala');
+  const t3Id        = await iu('Ms. Emily Nambooze',        'emily.nambooze@school.edu',         'teacher',   '+256-70-200-0004', 'Plot 56, Bukoto, Kampala');
+  const counselorId = await iu('Dr. Patricia Namutebi',     'counselor@school.edu',              'counselor', '+256-78-200-0005', 'Plot 78, Muyenga, Kampala');
+  const p1Id        = await iu('Mr. James Mugisha',         'james.mugisha@gmail.com',           'parent',    '+256-77-301-0001', 'Plot 10, Ntinda, Kampala');
+  const p2Id        = await iu('Mrs. Mary Nakyeyune',       'mary.nakyeyune@gmail.com',          'parent',    '+256-70-301-0002', 'Plot 22, Bukoto, Kampala');
+  const p3Id        = await iu('Mr. Robert Ssemakula',      'robert.ssemakula@gmail.com',        'parent',    '+256-75-301-0003', 'Plot 44, Nansana, Wakiso');
+  const p4Id        = await iu('Mrs. Fortunate Nalubega',   'fortunate.nalubega@gmail.com',      'parent',    '+256-77-301-0004', 'Plot 66, Makindye, Kampala');
+  const p5Id        = await iu('Mr. David Kiwanuka',        'david.kiwanuka@gmail.com',          'parent',    '+256-78-301-0005', 'Plot 88, Muyenga, Kampala');
+  const p6Id        = await iu('Mrs. Susan Namugga',        'susan.namugga@gmail.com',           'parent',    '+256-70-301-0006', 'Plot 100, Entebbe Road, Kampala');
+  const su1Id       = await iu('Namukasa Emma',             'emma.namukasa@student.edu',         'student',   null, 'Plot 10, Ntinda, Kampala');
+  const su2Id       = await iu('Ssemwogerere Liam',         'liam.ssemwogerere@student.edu',     'student',   null, 'Plot 22, Bukoto, Kampala');
+  const su3Id       = await iu('Nalwoga Sophia',            'sophia.nalwoga@student.edu',        'student',   null, 'Plot 44, Nansana, Wakiso');
+  const su4Id       = await iu('Mugabi Noah',               'noah.mugabi@student.edu',           'student',   null, 'Plot 66, Makindye, Kampala');
+  const su5Id       = await iu('Nabirye Olivia',            'olivia.nabirye@student.edu',        'student',   null, 'Plot 88, Muyenga, Kampala');
+  const su6Id       = await iu('Wasswa William',            'william.wasswa@student.edu',        'student',   null, 'Plot 100, Entebbe Road, Kampala');
+  const su7Id       = await iu('Nanteza Ava',               'ava.nanteza@student.edu',           'student',   null, 'Plot 12, Kololo Hill, Kampala');
+  const su8Id       = await iu('Kiggundu James',            'james.kiggundu@student.edu',        'student',   null, 'Plot 34, Ntinda, Kampala');
+  const su9Id       = await iu('Nakimera Charlotte',        'charlotte.nakimera@student.edu',    'student',   null, 'Plot 56, Bukoto, Kampala');
 
   const ic = async (name, grade, tid, room) => {
     const r = await db.run('INSERT INTO classes (name,grade_level,class_teacher_id,room) VALUES (?,?,?,?)', [name, grade, tid, room]);
@@ -304,9 +304,9 @@ async function initializeDatabase() {
           [stId, ft, amt, due, term, ft]);
         return r.lastID;
       };
-      const fT = await addFee('Tuition Fee', 500);
-      const fTr = await addFee('Transport Fee', 120);
-      const fA = await addFee('Activity Fee', 50);
+      const fT = await addFee('Tuition Fee', 850000);
+      const fTr = await addFee('Transport Fee', 200000);
+      const fA = await addFee('Activity Fee', 85000);
       const pay = (fid, amt, ref) => db.run('INSERT INTO fee_payments (fee_id,amount_paid,payment_date,payment_method,reference_number,received_by) VALUES (?,?,?,?,?,?)',
         [fid, amt, '2026-01-10', 'cash', ref, adminId]);
       if (Math.random() < pp) await pay(fT, 500, `REF${1000+si*10+t}`);
@@ -366,21 +366,21 @@ async function initializeDatabase() {
   }
 
   const msgs = [
-    [p1Id, t1Id, "Emma's progress", "Good morning Mrs. Johnson, I wanted to enquire about Emma's performance in Mathematics this term."],
-    [t1Id, p1Id, "Re: Emma's progress", "Dear Mr. Wilson, thank you for reaching out. Emma is finding the algebra section challenging but she is working hard."],
-    [p2Id, t1Id, "Liam's attendance", "Dear Mrs. Johnson, Liam was unwell last week. Can you share what he missed?"],
-    [adminId, counselorId, 'At-risk students', 'Dr. Lee, please review the flagged students in the early warning system.'],
-    [counselorId, adminId, 'Re: At-risk students', 'Noted. I have already scheduled sessions with Sophia Taylor and Charlotte Davis.'],
+    [p1Id, t1Id, "Namukasa Emma's progress", "Good morning Mrs. Namaganda, I wanted to enquire about Emma's performance in Mathematics this term."],
+    [t1Id, p1Id, "Re: Namukasa Emma's progress", "Dear Mr. Mugisha, thank you for reaching out. Emma is finding the algebra section challenging but she is working hard."],
+    [p2Id, t1Id, "Ssemwogerere Liam's attendance", "Dear Mrs. Namaganda, Liam was unwell last week. Can you share what he missed?"],
+    [adminId, counselorId, 'At-risk students', 'Dr. Namutebi, please review the flagged students in the early warning system.'],
+    [counselorId, adminId, 'Re: At-risk students', 'Noted. I have already scheduled sessions with Nalwoga Sophia and Nakimera Charlotte.'],
   ];
   for (const [from, to, subj, content] of msgs) {
     await db.run('INSERT INTO messages (sender_id,receiver_id,subject,content) VALUES (?,?,?,?)', [from, to, subj, content]);
   }
 
   const notifs = [
-    [p1Id, 'Grade Update', 'Emma Wilson has received new grades for Term 2 tests.', 'info', 'grade'],
-    [p3Id, 'Attendance Alert', 'Sophia Taylor has been absent 3 times this week.', 'alert', 'attendance'],
-    [p3Id, 'Fee Reminder', 'Outstanding fee balance for Sophia Taylor: GH₵500 due April 1, 2026.', 'warning', 'fee'],
-    [p6Id, 'Attendance Alert', 'Charlotte Davis has missed 4 days this week.', 'alert', 'attendance'],
+    [p1Id, 'Grade Update', 'Namukasa Emma has received new grades for Term 2 tests.', 'info', 'grade'],
+    [p3Id, 'Attendance Alert', 'Nalwoga Sophia has been absent 3 times this week.', 'alert', 'attendance'],
+    [p3Id, 'Fee Reminder', 'Outstanding fee balance for Nalwoga Sophia: UGX 850,000 due April 1, 2026.', 'warning', 'fee'],
+    [p6Id, 'Attendance Alert', 'Nakimera Charlotte has missed 4 days this week.', 'alert', 'attendance'],
     [adminId, 'Early Warning Triggered', '2 students have been flagged by the early warning system.', 'alert', 'warning'],
     [t1Id, 'Grade Submission Reminder', 'Term 2 grades are due for submission by March 20, 2026.', 'warning', 'grade'],
   ];
@@ -404,9 +404,9 @@ async function initializeDatabase() {
   console.log('─────────────────────────────────────────────');
   console.log('Demo Credentials (password: password123)');
   console.log('  Admin:     admin@school.edu');
-  console.log('  Teacher:   sarah.johnson@school.edu');
-  console.log('  Parent:    james.wilson@gmail.com');
-  console.log('  Student:   emma.wilson@student.edu');
+  console.log('  Teacher:   sarah.namaganda@school.edu');
+  console.log('  Parent:    james.mugisha@gmail.com');
+  console.log('  Student:   emma.namukasa@student.edu');
   console.log('  Counselor: counselor@school.edu');
   console.log('─────────────────────────────────────────────');
 }

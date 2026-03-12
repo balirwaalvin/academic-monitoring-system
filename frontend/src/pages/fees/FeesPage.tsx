@@ -84,15 +84,15 @@ export default function FeesPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="card p-4 text-center">
-          <p className="text-2xl font-bold text-slate-800">GH¢{totalAmount.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-slate-800">UGX {totalAmount.toLocaleString()}</p>
           <p className="text-xs text-slate-500 mt-1">Total Expected</p>
         </div>
         <div className="card p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">GH¢{totalPaid.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-green-600">UGX {totalPaid.toLocaleString()}</p>
           <p className="text-xs text-slate-500 mt-1">Total Collected</p>
         </div>
         <div className="card p-4 text-center">
-          <p className="text-2xl font-bold text-red-600">GH¢{totalBalance.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-red-600">UGX {totalBalance.toLocaleString()}</p>
           <p className="text-xs text-slate-500 mt-1">Outstanding</p>
         </div>
       </div>
@@ -138,9 +138,9 @@ export default function FeesPage() {
                 <td className="table-td font-medium">{f.student_name}</td>
                 <td className="table-td capitalize">{f.fee_type}</td>
                 <td className="table-td">{f.term}</td>
-                <td className="table-td">GH¢{f.amount.toLocaleString()}</td>
-                <td className="table-td text-green-600">GH¢{f.amount_paid.toLocaleString()}</td>
-                <td className="table-td font-semibold text-red-600">GH¢{f.balance.toLocaleString()}</td>
+                <td className="table-td">UGX {f.amount.toLocaleString()}</td>
+                <td className="table-td text-green-600">UGX {f.amount_paid.toLocaleString()}</td>
+                <td className="table-td font-semibold text-red-600">UGX {f.balance.toLocaleString()}</td>
                 <td className="table-td">{f.due_date ? new Date(f.due_date).toLocaleDateString() : '—'}</td>
                 <td className="table-td"><FeeStatusBadge status={f.payment_status} /></td>
                 {['admin', 'teacher'].includes(user?.role || '') && (
@@ -165,7 +165,7 @@ export default function FeesPage() {
             <div className="p-3 bg-slate-50 rounded-lg text-sm">
               <p className="font-medium">{selectedFee.student_name}</p>
               <p className="text-slate-500">{selectedFee.fee_type} • {selectedFee.term}</p>
-              <p className="text-slate-500 mt-1">Outstanding: <span className="font-semibold text-red-600">GH¢{selectedFee.balance.toLocaleString()}</span></p>
+              <p className="text-slate-500 mt-1">Outstanding: <span className="font-semibold text-red-600">UGX {selectedFee.balance.toLocaleString()}</span></p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Amount (GH¢)</label>
@@ -221,7 +221,7 @@ export default function FeesPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Amount (GH¢)</label>
+              <label className="block text-sm font-medium mb-1">Amount (UGX)</label>
               <input type="number" min="1" step="0.01" className="input w-full" required value={feeForm.amount} onChange={e => setFeeForm(f => ({ ...f, amount: e.target.value }))} />
             </div>
             <div>
