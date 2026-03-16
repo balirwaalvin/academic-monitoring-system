@@ -136,11 +136,11 @@ The seed creates sample users with password:
 
 Example accounts:
 
-- Admin: admin@school.edu
-- Teacher: sarah.namaganda@school.edu
-- Counselor: counselor@school.edu
+- Admin: admin@brevian.ac.ug
+- Teacher: sarah.namaganda@brevian.ac.ug
+- Counselor: counselor@brevian.ac.ug
 - Parent: james.mugisha@gmail.com
-- Student: emma.namukasa@student.edu
+- Student: emma.namukasa@brevian.ac.ug
 
 ## API Health Check
 

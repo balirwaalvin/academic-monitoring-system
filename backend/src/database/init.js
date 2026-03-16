@@ -200,76 +200,90 @@ async function initializeDatabase() {
     return r.lastID;
   };
 
-  const adminId     = await iu('Dr. Ssekandi Robert',       'admin@school.edu',                 'admin',     '+256-41-100-0001', 'Plot 1, Nakasero Road, Kampala');
-  const t1Id        = await iu('Mrs. Sarah Namaganda',      'sarah.namaganda@school.edu',        'teacher',   '+256-77-200-0002', 'Plot 12, Kololo Hill, Kampala');
-  const t2Id        = await iu('Mr. Michael Okello',        'michael.okello@school.edu',         'teacher',   '+256-77-200-0003', 'Plot 34, Ntinda, Kampala');
-  const t3Id        = await iu('Ms. Emily Nambooze',        'emily.nambooze@school.edu',         'teacher',   '+256-70-200-0004', 'Plot 56, Bukoto, Kampala');
-  const counselorId = await iu('Dr. Patricia Namutebi',     'counselor@school.edu',              'counselor', '+256-78-200-0005', 'Plot 78, Muyenga, Kampala');
+  const adminId     = await iu('Dr. Ssekandi Robert',       'admin@brevian.ac.ug',               'admin',     '+256-41-100-0001', 'Plot 1, Nakasero Road, Kampala');
+  const t1Id        = await iu('Mrs. Sarah Namaganda',      'sarah.namaganda@brevian.ac.ug',     'teacher',   '+256-77-200-0002', 'Plot 12, Kololo Hill, Kampala');
+  const t2Id        = await iu('Mr. Michael Okello',        'michael.okello@brevian.ac.ug',      'teacher',   '+256-77-200-0003', 'Plot 34, Ntinda, Kampala');
+  const t3Id        = await iu('Ms. Emily Nambooze',        'emily.nambooze@brevian.ac.ug',      'teacher',   '+256-70-200-0004', 'Plot 56, Bukoto, Kampala');
+  const counselorId = await iu('Dr. Patricia Namutebi',     'counselor@brevian.ac.ug',           'counselor', '+256-78-200-0005', 'Plot 78, Muyenga, Kampala');
   const p1Id        = await iu('Mr. James Mugisha',         'james.mugisha@gmail.com',           'parent',    '+256-77-301-0001', 'Plot 10, Ntinda, Kampala');
   const p2Id        = await iu('Mrs. Mary Nakyeyune',       'mary.nakyeyune@gmail.com',          'parent',    '+256-70-301-0002', 'Plot 22, Bukoto, Kampala');
   const p3Id        = await iu('Mr. Robert Ssemakula',      'robert.ssemakula@gmail.com',        'parent',    '+256-75-301-0003', 'Plot 44, Nansana, Wakiso');
   const p4Id        = await iu('Mrs. Fortunate Nalubega',   'fortunate.nalubega@gmail.com',      'parent',    '+256-77-301-0004', 'Plot 66, Makindye, Kampala');
   const p5Id        = await iu('Mr. David Kiwanuka',        'david.kiwanuka@gmail.com',          'parent',    '+256-78-301-0005', 'Plot 88, Muyenga, Kampala');
   const p6Id        = await iu('Mrs. Susan Namugga',        'susan.namugga@gmail.com',           'parent',    '+256-70-301-0006', 'Plot 100, Entebbe Road, Kampala');
-  const su1Id       = await iu('Namukasa Emma',             'emma.namukasa@student.edu',         'student',   null, 'Plot 10, Ntinda, Kampala');
-  const su2Id       = await iu('Ssemwogerere Liam',         'liam.ssemwogerere@student.edu',     'student',   null, 'Plot 22, Bukoto, Kampala');
-  const su3Id       = await iu('Nalwoga Sophia',            'sophia.nalwoga@student.edu',        'student',   null, 'Plot 44, Nansana, Wakiso');
-  const su4Id       = await iu('Mugabi Noah',               'noah.mugabi@student.edu',           'student',   null, 'Plot 66, Makindye, Kampala');
-  const su5Id       = await iu('Nabirye Olivia',            'olivia.nabirye@student.edu',        'student',   null, 'Plot 88, Muyenga, Kampala');
-  const su6Id       = await iu('Wasswa William',            'william.wasswa@student.edu',        'student',   null, 'Plot 100, Entebbe Road, Kampala');
-  const su7Id       = await iu('Nanteza Ava',               'ava.nanteza@student.edu',           'student',   null, 'Plot 12, Kololo Hill, Kampala');
-  const su8Id       = await iu('Kiggundu James',            'james.kiggundu@student.edu',        'student',   null, 'Plot 34, Ntinda, Kampala');
-  const su9Id       = await iu('Nakimera Charlotte',        'charlotte.nakimera@student.edu',    'student',   null, 'Plot 56, Bukoto, Kampala');
+  const su1Id       = await iu('Namukasa Emma',             'emma.namukasa@brevian.ac.ug',       'student',   null, 'Plot 10, Ntinda, Kampala');
+  const su2Id       = await iu('Ssemwogerere Liam',         'liam.ssemwogerere@brevian.ac.ug',   'student',   null, 'Plot 22, Bukoto, Kampala');
+  const su3Id       = await iu('Nalwoga Sophia',            'sophia.nalwoga@brevian.ac.ug',      'student',   null, 'Plot 44, Nansana, Wakiso');
+  const su4Id       = await iu('Mugabi Noah',               'noah.mugabi@brevian.ac.ug',         'student',   null, 'Plot 66, Makindye, Kampala');
+  const su5Id       = await iu('Nabirye Olivia',            'olivia.nabirye@brevian.ac.ug',      'student',   null, 'Plot 88, Muyenga, Kampala');
+  const su6Id       = await iu('Wasswa William',            'william.wasswa@brevian.ac.ug',      'student',   null, 'Plot 100, Entebbe Road, Kampala');
+  const su7Id       = await iu('Nanteza Ava',               'ava.nanteza@brevian.ac.ug',         'student',   null, 'Plot 12, Kololo Hill, Kampala');
+  const su8Id       = await iu('Kiggundu James',            'james.kiggundu@brevian.ac.ug',      'student',   null, 'Plot 34, Ntinda, Kampala');
+  const su9Id       = await iu('Nakimera Charlotte',        'charlotte.nakimera@brevian.ac.ug',  'student',   null, 'Plot 56, Bukoto, Kampala');
 
   const ic = async (name, grade, tid, room) => {
     const r = await db.run('INSERT INTO classes (name,grade_level,class_teacher_id,room) VALUES (?,?,?,?)', [name, grade, tid, room]);
     return r.lastID;
   };
-  const c1Id = await ic('Grade 10A', 'Grade 10', t1Id, 'Room 101');
-  const c2Id = await ic('Grade 11B', 'Grade 11', t2Id, 'Room 201');
-  const c3Id = await ic('Grade 12C', 'Grade 12', t3Id, 'Room 301');
+  const classProfiles = [
+    { name: 'Primary 1', grade: 'Primary 1', teacherId: t1Id, room: 'Block A - P1' },
+    { name: 'Primary 2', grade: 'Primary 2', teacherId: t2Id, room: 'Block A - P2' },
+    { name: 'Primary 3', grade: 'Primary 3', teacherId: t3Id, room: 'Block A - P3' },
+    { name: 'Primary 4', grade: 'Primary 4', teacherId: t1Id, room: 'Block B - P4' },
+    { name: 'Primary 5', grade: 'Primary 5', teacherId: t2Id, room: 'Block B - P5' },
+    { name: 'Primary 6', grade: 'Primary 6', teacherId: t3Id, room: 'Block B - P6' },
+    { name: 'Primary 7', grade: 'Primary 7', teacherId: t1Id, room: 'Block C - P7' },
+  ];
+  const classIds = [];
+  for (const cls of classProfiles) {
+    classIds.push(await ic(cls.name, cls.grade, cls.teacherId, cls.room));
+  }
 
   const is = async (uid, num, cid, pid, dob, gender) => {
     const r = await db.run('INSERT INTO students (user_id,student_number,class_id,parent_id,date_of_birth,gender) VALUES (?,?,?,?,?,?)', [uid, num, cid, pid, dob, gender]);
     return r.lastID;
   };
-  const st1Id = await is(su1Id,'STU-2026-001',c1Id,p1Id,'2010-04-15','female');
-  const st2Id = await is(su2Id,'STU-2026-002',c1Id,p2Id,'2010-07-22','male');
-  const st3Id = await is(su3Id,'STU-2026-003',c1Id,p3Id,'2010-11-08','female');
-  const st4Id = await is(su4Id,'STU-2026-004',c2Id,p4Id,'2009-03-30','male');
-  const st5Id = await is(su5Id,'STU-2026-005',c2Id,p5Id,'2009-09-14','female');
-  const st6Id = await is(su6Id,'STU-2026-006',c2Id,p6Id,'2009-01-25','male');
-  const st7Id = await is(su7Id,'STU-2026-007',c3Id,p1Id,'2008-06-12','female');
-  const st8Id = await is(su8Id,'STU-2026-008',c3Id,p2Id,'2008-12-03','male');
-  const st9Id = await is(su9Id,'STU-2026-009',c3Id,p3Id,'2008-08-19','female');
+  const st1Id = await is(su1Id,'STU-2026-001',classIds[0],p1Id,'2018-04-15','female');
+  const st2Id = await is(su2Id,'STU-2026-002',classIds[1],p2Id,'2017-07-22','male');
+  const st3Id = await is(su3Id,'STU-2026-003',classIds[2],p3Id,'2016-11-08','female');
+  const st4Id = await is(su4Id,'STU-2026-004',classIds[3],p4Id,'2015-03-30','male');
+  const st5Id = await is(su5Id,'STU-2026-005',classIds[4],p5Id,'2014-09-14','female');
+  const st6Id = await is(su6Id,'STU-2026-006',classIds[5],p6Id,'2013-01-25','male');
+  const st7Id = await is(su7Id,'STU-2026-007',classIds[6],p1Id,'2012-06-12','female');
+  const st8Id = await is(su8Id,'STU-2026-008',classIds[2],p2Id,'2016-12-03','male');
+  const st9Id = await is(su9Id,'STU-2026-009',classIds[5],p3Id,'2013-08-19','female');
   const stIds = [st1Id,st2Id,st3Id,st4Id,st5Id,st6Id,st7Id,st8Id,st9Id];
+  const studentClassIndexes = [0, 1, 2, 3, 4, 5, 6, 2, 5];
 
   const isub = async (name, code, cid, tid) => {
     const r = await db.run('INSERT INTO subjects (name,code,class_id,teacher_id) VALUES (?,?,?,?)', [name, code, cid, tid]);
     return r.lastID;
   };
-  const subs10 = [
-    await isub('Mathematics','MATH10',c1Id,t1Id), await isub('English Language','ENG10',c1Id,t1Id),
-    await isub('Integrated Science','SCI10',c1Id,t2Id), await isub('Social Studies','SOC10',c1Id,t2Id),
-    await isub('Computer Studies','COMP10',c1Id,t3Id), await isub('Creative Arts','ART10',c1Id,t3Id),
-  ];
-  const subs11 = [
-    await isub('Mathematics','MATH11',c2Id,t2Id), await isub('English Language','ENG11',c2Id,t2Id),
-    await isub('Physics','PHY11',c2Id,t1Id), await isub('Chemistry','CHEM11',c2Id,t1Id),
-    await isub('Computer Science','COMP11',c2Id,t3Id), await isub('Business Studies','BUS11',c2Id,t3Id),
-  ];
-  const subs12 = [
-    await isub('Mathematics','MATH12',c3Id,t3Id), await isub('English Language','ENG12',c3Id,t3Id),
-    await isub('Physics','PHY12',c3Id,t1Id), await isub('Chemistry','CHEM12',c3Id,t1Id),
-    await isub('Computer Science','COMP12',c3Id,t2Id), await isub('Economics','ECO12',c3Id,t2Id),
-  ];
-  const classSubjects = [subs10, subs11, subs12];
   const teacherIds = [t1Id, t2Id, t3Id];
+  const primarySubjects = [
+    { name: 'Mathematics', shortCode: 'MATH' },
+    { name: 'English', shortCode: 'ENG' },
+    { name: 'Science', shortCode: 'SCI' },
+    { name: 'Social Studies', shortCode: 'SST' },
+    { name: 'Literacy', shortCode: 'LIT' },
+    { name: 'Religious Education', shortCode: 'RE' },
+  ];
+  const classSubjects = [];
+  for (let classIndex = 0; classIndex < classIds.length; classIndex++) {
+    const classId = classIds[classIndex];
+    const subjectIds = [];
+    for (let subjectIndex = 0; subjectIndex < primarySubjects.length; subjectIndex++) {
+      const subject = primarySubjects[subjectIndex];
+      const teacherId = teacherIds[(classIndex + subjectIndex) % teacherIds.length];
+      subjectIds.push(await isub(subject.name, `P${classIndex + 1}-${subject.shortCode}`, classId, teacherId));
+    }
+    classSubjects.push(subjectIds);
+  }
 
   const getGL = s => s >= 80 ? 'A' : s >= 70 ? 'B' : s >= 60 ? 'C' : s >= 50 ? 'D' : 'F';
   const profiles = [[85,8],[70,10],[52,12],[82,7],[92,5],[61,12],[78,9],[95,4],[45,14]];
   for (let si = 0; si < stIds.length; si++) {
-    const stId = stIds[si], cIdx = Math.floor(si/3), [base,v] = profiles[si], tid = teacherIds[cIdx];
+    const stId = stIds[si], cIdx = studentClassIndexes[si], [base,v] = profiles[si], tid = classProfiles[cIdx].teacherId;
     for (const term of ['Term 1','Term 2']) {
       for (const aType of ['exam','test','assignment']) {
         for (const subId of classSubjects[cIdx]) {
@@ -283,7 +297,7 @@ async function initializeDatabase() {
 
   const absentProb = [0.04,0.10,0.28,0.05,0.01,0.18,0.07,0.02,0.35];
   for (let si = 0; si < stIds.length; si++) {
-    const stId = stIds[si], cIdx = Math.floor(si/3), tid = teacherIds[cIdx], prob = absentProb[si];
+    const stId = stIds[si], cIdx = studentClassIndexes[si], tid = classProfiles[cIdx].teacherId, prob = absentProb[si];
     for (let day = 1; day <= 60; day++) {
       const d = new Date('2026-03-12'); d.setDate(d.getDate() - day);
       if (d.getDay() === 0 || d.getDay() === 6) continue;
@@ -400,14 +414,14 @@ async function initializeDatabase() {
     await db.run('INSERT INTO early_warnings (student_id,warning_type,severity,description) VALUES (?,?,?,?)', [sid, wtype, sev, desc]);
   }
 
-  console.log('✅ Database initialized with seed data for Greenfield Academy');
+  console.log('✅ Database initialized with seed data for Brevian Academy');
   console.log('─────────────────────────────────────────────');
   console.log('Demo Credentials (password: password123)');
-  console.log('  Admin:     admin@school.edu');
-  console.log('  Teacher:   sarah.namaganda@school.edu');
+  console.log('  Admin:     admin@brevian.ac.ug');
+  console.log('  Teacher:   sarah.namaganda@brevian.ac.ug');
   console.log('  Parent:    james.mugisha@gmail.com');
-  console.log('  Student:   emma.namukasa@student.edu');
-  console.log('  Counselor: counselor@school.edu');
+  console.log('  Student:   emma.namukasa@brevian.ac.ug');
+  console.log('  Counselor: counselor@brevian.ac.ug');
   console.log('─────────────────────────────────────────────');
 }
 

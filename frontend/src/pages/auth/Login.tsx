@@ -4,16 +4,16 @@ import { GraduationCap, Eye, EyeOff, LogIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const demoUsers = [
-  { role: 'Admin', email: 'admin@school.edu', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  { role: 'Teacher', email: 'sarah.johnson@school.edu', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { role: 'Counselor', email: 'counselor@school.edu', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-  { role: 'Parent', email: 'james.wilson@gmail.com', color: 'bg-green-100 text-green-700 border-green-200' },
-  { role: 'Student', email: 'emma.wilson@student.edu', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { role: 'Admin', email: 'admin@brevian.ac.ug', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  { role: 'Teacher', email: 'sarah.namaganda@brevian.ac.ug', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { role: 'Counselor', email: 'counselor@brevian.ac.ug', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  { role: 'Parent', email: 'james.mugisha@gmail.com', color: 'bg-green-100 text-green-700 border-green-200' },
+  { role: 'Student', email: 'emma.namukasa@brevian.ac.ug', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 ];
 
 export default function Login() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@school.edu');
+  const [email, setEmail] = useState('admin@brevian.ac.ug');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function Login() {
           </div>
           <h1 className="text-3xl font-bold text-white">SWAM-MIS</h1>
           <p className="text-primary-200 mt-1 text-sm">Student Well-Being & Academic Monitoring</p>
-          <p className="text-primary-300 text-xs mt-0.5">Greenfield Academy</p>
+          <p className="text-primary-300 text-xs mt-0.5">Brevian Academy</p>
         </div>
 
         {/* Login Card */}

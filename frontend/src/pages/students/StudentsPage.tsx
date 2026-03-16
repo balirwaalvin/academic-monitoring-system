@@ -126,7 +126,7 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
-            <input className="input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="student@school.edu" />
+            <input className="input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="student@brevian.ac.ug" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Student Number *</label>
