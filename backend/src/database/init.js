@@ -200,7 +200,7 @@ async function initializeDatabase() {
     return r.lastID;
   };
 
-  const adminId     = await iu('Dr. Ssekandi Robert',       'admin@brevian.ac.ug',               'admin',     '+256-41-100-0001', 'Plot 1, Nakasero Road, Kampala');
+  const adminId     = await iu('Dr. Nakaddu Brevian',       'admin@brevian.ac.ug',               'admin',     '+256-41-100-0001', 'Plot 1, Nakasero Road, Kampala');
   const t1Id        = await iu('Mrs. Sarah Namaganda',      'sarah.namaganda@brevian.ac.ug',     'teacher',   '+256-77-200-0002', 'Plot 12, Kololo Hill, Kampala');
   const t2Id        = await iu('Mr. Michael Okello',        'michael.okello@brevian.ac.ug',      'teacher',   '+256-77-200-0003', 'Plot 34, Ntinda, Kampala');
   const t3Id        = await iu('Ms. Emily Nambooze',        'emily.nambooze@brevian.ac.ug',      'teacher',   '+256-70-200-0004', 'Plot 56, Bukoto, Kampala');
