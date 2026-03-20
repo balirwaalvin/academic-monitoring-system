@@ -120,20 +120,29 @@ const buildRoleProfile = async (user: Loose | null): Promise<Loose | null> => {
   if (!user) return null;
 
   if (user.role === 'student') {
-    const students = await listCollection(appwrite.collections.students, { user_id: String(user.id) });
-    return students[0] || null;
+    try {
+      const students = await listCollection(appwrite.collections.students, { user_id: String(user.id) });
+      return students[0] || null;
+    } catch {
+      return null;
+    }
   }
 
   if (user.role === 'parent') {
-    const children = await listCollection(appwrite.collections.students, { parent_id: String(user.id) });
-    return {
-      children: children.map((child) => ({
-        student_id: child.id,
-        student_number: child.student_number,
-        name: child.name,
-        class_name: child.class_name,
-      })),
-    };
+    try {
+      const children = await listCollection(appwrite.collections.students, { parent_id: String(user.id) });
+      return {
+        children: children.map((child) => ({
+          student_id: child.id,
+          student_number: child.student_number,
+          name: child.name,
+          class_name: child.class_name,
+        })),
+      };
+    } catch {
+      // Keep sign-in successful even when parent cannot read students directly.
+      return { children: [] };
+    }
   }
 
   return null;
