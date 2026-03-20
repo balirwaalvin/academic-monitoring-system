@@ -635,6 +635,72 @@ export const usersApi = {
   create: async (data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.users, data)),
   update: async (id: EntityId, data: Loose): ApiResult<Loose> => ok(await updateIn(appwrite.collections.users, id, data)),
 
+  createParentForStudent: async (
+    studentId: EntityId,
+    data: { name: string; email: string; phone?: string; address?: string; password: string }
+  ): ApiResult<Loose> => {
+    const email = String(data.email || '').trim().toLowerCase();
+    const name = String(data.name || '').trim();
+    if (!email || !name || !data.password) {
+      throw new Error('Parent name, email and password are required.');
+    }
+
+    let parentAuthId: string | null = null;
+    try {
+      const account = await appwrite.account.create(appwrite.id.unique(), email, data.password, name);
+      parentAuthId = account.$id;
+    } catch (error: any) {
+      const message = String(error?.message || '').toLowerCase();
+      if (!message.includes('already exists') && !message.includes('duplicate') && !message.includes('conflict')) {
+        throw error;
+      }
+    }
+
+    const allParents = await listCollection(appwrite.collections.users, { role: 'parent' });
+    const existingParent = allParents.find((u) => String(u.email || '').trim().toLowerCase() === email);
+
+    let parentProfile: Loose;
+    const parentPayload = {
+      name,
+      email,
+      role: 'parent',
+      phone: data.phone || '',
+      address: data.address || '',
+      is_active: 1,
+      ...(parentAuthId ? { appwrite_user_id: parentAuthId } : {}),
+    };
+
+    if (existingParent) {
+      parentProfile = await updateIn(appwrite.collections.users, existingParent.id, parentPayload);
+      parentAuthId = parentAuthId || existingParent.appwrite_user_id || null;
+    } else {
+      if (!parentAuthId) {
+        throw new Error('Parent auth account exists but parent profile is missing. Create a users document for this email or use a different email.');
+      }
+      parentProfile = await createIn(appwrite.collections.users, parentPayload);
+    }
+
+    const linkPayload = {
+      parent_id: parentProfile.id,
+      parent_name: parentPayload.name,
+      parent_phone: parentPayload.phone,
+      parent_email: parentPayload.email,
+    };
+
+    try {
+      await updateIn(appwrite.collections.students, studentId, linkPayload);
+    } catch {
+      const fallback = {
+        parent_name: parentPayload.name,
+        parent_phone: parentPayload.phone,
+        parent_email: parentPayload.email,
+      };
+      await updateIn(appwrite.collections.students, studentId, fallback);
+    }
+
+    return ok({ parent: parentProfile, linked_student_id: studentId });
+  },
+
   changePassword: async (_id: EntityId, data: Loose): ApiResult<{ success: true }> => {
     if (!data.newPassword || typeof data.newPassword !== 'string') {
       throw new Error('newPassword is required.');

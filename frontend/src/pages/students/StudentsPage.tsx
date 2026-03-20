@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { studentsApi, classesApi } from '../../services/api';
+import { studentsApi, classesApi, usersApi } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../../components/common/Modal';
@@ -16,7 +16,10 @@ export default function StudentsPage() {
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showParentModal, setShowParentModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [form, setForm] = useState({ name: '', email: '', student_number: '', class_id: '', parent_id: '', date_of_birth: '', gender: '' });
+  const [parentForm, setParentForm] = useState({ name: '', email: '', phone: '', address: '', password: 'password123' });
 
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ['students', search, classFilter],
@@ -33,6 +36,33 @@ export default function StudentsPage() {
     onSuccess: () => { toast.success('Student created successfully'); qc.invalidateQueries({ queryKey: ['students'] }); setShowAdd(false); setForm({ name: '', email: '', student_number: '', class_id: '', parent_id: '', date_of_birth: '', gender: '' }); },
     onError: (e: { response?: { data?: { error?: string } } }) => toast.error(e.response?.data?.error || 'Failed to create student'),
   });
+
+  const linkParentMutation = useMutation({
+    mutationFn: (data: typeof parentForm) => {
+      if (!selectedStudent) throw new Error('Select a student first.');
+      return usersApi.createParentForStudent(selectedStudent.id, data);
+    },
+    onSuccess: () => {
+      toast.success('Parent account created and linked successfully');
+      qc.invalidateQueries({ queryKey: ['students'] });
+      setShowParentModal(false);
+      setSelectedStudent(null);
+      setParentForm({ name: '', email: '', phone: '', address: '', password: 'password123' });
+    },
+    onError: (e: any) => toast.error(e?.message || 'Failed to create/link parent account'),
+  });
+
+  const openParentModal = (student: Student) => {
+    setSelectedStudent(student);
+    setParentForm({
+      name: student.parent_name || '',
+      email: student.parent_email || '',
+      phone: student.parent_phone || '',
+      address: '',
+      password: 'password123',
+    });
+    setShowParentModal(true);
+  };
 
   return (
     <div className="space-y-5">
@@ -106,9 +136,16 @@ export default function StudentsPage() {
                     <Badge label={s.status} color={s.status === 'active' ? 'green' : s.status === 'suspended' ? 'red' : 'slate'} />
                   </td>
                   <td className="table-td">
-                    <button onClick={() => navigate(`/students/${s.id}`)} className="btn-secondary btn-sm">
-                      <Eye className="w-3 h-3" /> View
-                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => navigate(`/students/${s.id}`)} className="btn-secondary btn-sm">
+                        <Eye className="w-3 h-3" /> View
+                      </button>
+                      {user?.role === 'admin' && (
+                        <button onClick={() => openParentModal(s)} className="btn-secondary btn-sm">
+                          <UserCheck className="w-3 h-3" /> Link Parent
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -160,6 +197,50 @@ export default function StudentsPage() {
           </button>
           <button onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={showParentModal}
+        onClose={() => setShowParentModal(false)}
+        title={selectedStudent ? `Create Parent For ${selectedStudent.name}` : 'Create Parent Account'}
+        size="md"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            linkParentMutation.mutate(parentForm);
+          }}
+        >
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Parent Name *</label>
+            <input className="input w-full" required value={parentForm.name} onChange={e => setParentForm(f => ({ ...f, name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Parent Email *</label>
+            <input type="email" className="input w-full" required value={parentForm.email} onChange={e => setParentForm(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <input className="input w-full" value={parentForm.phone} onChange={e => setParentForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Temporary Password *</label>
+              <input className="input w-full" required value={parentForm.password} onChange={e => setParentForm(f => ({ ...f, password: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+            <input className="input w-full" value={parentForm.address} onChange={e => setParentForm(f => ({ ...f, address: e.target.value }))} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={linkParentMutation.isPending} className="btn-primary">
+              {linkParentMutation.isPending ? 'Saving...' : 'Create & Link Parent'}
+            </button>
+            <button type="button" onClick={() => setShowParentModal(false)} className="btn-secondary">Cancel</button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
