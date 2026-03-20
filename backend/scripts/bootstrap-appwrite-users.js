@@ -10,6 +10,7 @@ const {
   APPWRITE_DATABASE_ID,
   APPWRITE_COLLECTION_USERS = 'users',
   APPWRITE_COLLECTION_STUDENTS = 'students',
+  APPWRITE_COLLECTION_CLASSES = 'classes',
   APPWRITE_BOOTSTRAP_PASSWORD = 'password123',
 } = process.env;
 
@@ -132,6 +133,42 @@ async function removeStudentAccount() {
   }
 }
 
+async function ensureDefaultClasses() {
+  const classes = await db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_CLASSES, [sdk.Query.limit(10)]);
+  if (classes.total > 0) {
+    console.log(`Classes already exist (${classes.total}).`);
+    return;
+  }
+
+  const teachers = await db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_USERS, [
+    sdk.Query.equal('role', 'teacher'),
+    sdk.Query.limit(20),
+  ]);
+
+  const teacherIds = teachers.documents.map((doc) => doc.id).filter(Boolean);
+  const defaults = [
+    { name: 'Primary 1', grade_level: 'Primary 1', room: 'Block A - P1' },
+    { name: 'Primary 2', grade_level: 'Primary 2', room: 'Block A - P2' },
+    { name: 'Primary 3', grade_level: 'Primary 3', room: 'Block A - P3' },
+    { name: 'Primary 4', grade_level: 'Primary 4', room: 'Block B - P4' },
+    { name: 'Primary 5', grade_level: 'Primary 5', room: 'Block B - P5' },
+    { name: 'Primary 6', grade_level: 'Primary 6', room: 'Block B - P6' },
+    { name: 'Primary 7', grade_level: 'Primary 7', room: 'Block C - P7' },
+  ];
+
+  for (let i = 0; i < defaults.length; i += 1) {
+    const item = defaults[i];
+    await db.createDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_CLASSES, sdk.ID.unique(), {
+      ...item,
+      academic_year: '2025/2026',
+      class_teacher_id: teacherIds.length ? teacherIds[i % teacherIds.length] : null,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  console.log(`Seeded ${defaults.length} default classes.`);
+}
+
 async function run() {
   console.log('Bootstrapping Appwrite role accounts...');
   for (const account of roleAccounts) {
@@ -139,6 +176,7 @@ async function run() {
   }
 
   await removeStudentAccount();
+  await ensureDefaultClasses();
   console.log('Done. Active accounts restored for admin, teacher, counselor, and parent.');
   console.log(`All restored accounts use password: ${APPWRITE_BOOTSTRAP_PASSWORD}`);
 }

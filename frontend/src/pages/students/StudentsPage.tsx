@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { studentsApi, classesApi, usersApi } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -26,10 +26,17 @@ export default function StudentsPage() {
     queryFn: () => studentsApi.list({ ...(search && { search }), ...(classFilter && { class_id: classFilter }) }).then(r => r.data),
   });
 
-  const { data: classes } = useQuery<Class[]>({
+  const classesQuery = useQuery<Class[]>({
     queryKey: ['classes'],
     queryFn: () => classesApi.list().then(r => r.data),
   });
+  const classes = classesQuery.data || [];
+
+  useEffect(() => {
+    if (classesQuery.isError) {
+      toast.error('Failed to load classes. Check Appwrite classes data and read permissions.');
+    }
+  }, [classesQuery.isError]);
 
   const createMutation = useMutation({
     mutationFn: (data: typeof form) => studentsApi.create(data),
@@ -75,7 +82,7 @@ export default function StudentsPage() {
           </div>
           <select className="select w-44" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
             <option value="">All Classes</option>
-            {classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         {user?.role === 'admin' && (
@@ -173,8 +180,9 @@ export default function StudentsPage() {
             <label className="block text-sm font-medium text-slate-700 mb-1">Class</label>
             <select className="select" value={form.class_id} onChange={e => setForm(f => ({ ...f, class_id: e.target.value }))}>
               <option value="">Select class</option>
-              {classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+            {classes.length === 0 && <p className="text-xs text-amber-600 mt-1">No classes found. Run backend bootstrap/provision scripts.</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
