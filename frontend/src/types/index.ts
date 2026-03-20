@@ -209,6 +209,7 @@ export interface Message {
   sender_role?: string;
   receiver_name?: string;
   receiver_role?: string;
+  recipient_name?: string;
 }
 
 // ─── Announcements ───────────────────────────────────────────────────────────
@@ -223,6 +224,7 @@ export interface Announcement {
   expires_at?: string;
   created_at: string;
   created_by_name?: string;
+  author_name?: string;
 }
 
 // ─── Notifications ───────────────────────────────────────────────────────────
@@ -246,9 +248,12 @@ export interface EarlyWarning {
   description: string;
   triggered_at: string;
   is_resolved: number;
+  resolved?: boolean;
   resolved_by?: number;
   resolved_at?: string;
   notes?: string;
+  resolution_notes?: string;
+  created_at: string;
   student_name?: string;
   student_number?: string;
   class_name?: string;
@@ -258,17 +263,24 @@ export interface EarlyWarning {
 // ─── Analytics ───────────────────────────────────────────────────────────────
 export interface OverviewAnalytics {
   totalStudents: number;
+  total_students?: number;
   totalTeachers: number;
   totalParents: number;
   totalClasses: number;
   attendanceToday: { present: number; absent: number; total: number };
+  attendance_rate?: number;
   avgPerformance: number;
+  at_risk_students?: number;
   feeCollection: { total_billed: number; total_collected: number };
   activeWarnings: number;
+  active_warnings?: number;
   openWellbeing: number;
   performanceByClass: { class_name: string; avg_score: number; student_count: number }[];
+  class_performance?: { class_name: string; avg_score: number; student_count: number }[];
   attendanceTrend: { date: string; rate: number }[];
+  attendance_trend?: { date: string; rate: number }[];
   subjectPerformance: { subject: string; avg_score: number }[];
+  subject_performance?: { subject: string; avg_score: number }[];
 }
 
 // ─── Events ──────────────────────────────────────────────────────────────────
@@ -277,6 +289,7 @@ export interface Event {
   title: string;
   description?: string;
   event_date: string;
+  start_date: string;
   end_date?: string;
   start_time?: string;
   end_time?: string;

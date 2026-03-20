@@ -4,7 +4,7 @@ import type { User, AuthState, StudentProfile, ParentProfile } from '../types';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -17,37 +17,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('swam_token');
-    const storedUser = localStorage.getItem('swam_user');
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      // Verify token
-      authApi.me()
-        .then(res => {
-          setUser(res.data.user);
-          setProfile(res.data.profile);
-        })
-        .catch(() => logout())
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
+    authApi.me()
+      .then((res) => {
+        setUser(res.data.user as User);
+        setProfile((res.data.profile || null) as StudentProfile | ParentProfile | null);
+        setToken('appwrite-session');
+      })
+      .catch(() => {
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
-    const { token: newToken, user: newUser, profile: newProfile } = res.data;
-    localStorage.setItem('swam_token', newToken);
-    localStorage.setItem('swam_user', JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
-    setProfile(newProfile);
+    const { token: sessionToken, user: profileUser, profile: roleProfile } = res.data;
+    setToken(sessionToken || 'appwrite-session');
+    setUser(profileUser as User);
+    setProfile((roleProfile || null) as StudentProfile | ParentProfile | null);
   };
 
-  const logout = () => {
-    localStorage.removeItem('swam_token');
-    localStorage.removeItem('swam_user');
+  const logout = async () => {
+    await authApi.logout();
     setToken(null);
     setUser(null);
     setProfile(null);

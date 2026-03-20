@@ -25,8 +25,8 @@ export default function Login() {
       await login(email, password);
       toast.success('Welcome back!');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: string } } };
-      toast.error(axiosErr?.response?.data?.error || 'Login failed. Check credentials.');
+      const appwriteErr = err as { message?: string };
+      toast.error(appwriteErr?.message || 'Login failed. Check credentials.');
     } finally {
       setLoading(false);
     }

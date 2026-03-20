@@ -19,26 +19,19 @@ This project provides role-based dashboards and workflows for administrators, te
 ## System Architecture
 
 - Frontend: React + TypeScript + Vite + Tailwind CSS
-- Backend: Node.js + Express
-- Database: SQLite (auto-created and seeded on first run)
-- Auth: JWT-based API authentication
+- Platform: Appwrite (Auth, Databases, Functions-ready service layer)
+- Hosting: Appwrite Sites
 
 Local development flow:
 
 1. Frontend runs on http://localhost:5173
-2. Backend runs on http://localhost:5000
-3. Frontend proxies /api requests to backend via Vite dev proxy
+2. Frontend connects directly to Appwrite using SDK
+3. Data and auth are handled by Appwrite services
 
 ## Repository Structure
 
 ```text
 .
-|-- backend/
-|   |-- src/
-|   |   |-- database/
-|   |   |-- middleware/
-|   |   `-- routes/
-|   `-- package.json
 |-- frontend/
 |   |-- src/
 |   |   |-- components/
@@ -80,23 +73,19 @@ npm --prefix frontend install
 npm --prefix backend install
 ```
 
-### 3) Configure environment
+### 3) Configure Appwrite environment
 
-Create a .env file inside backend/ with the following values:
+Copy frontend/.env.example to frontend/.env and set:
 
 ```env
-PORT=5000
-JWT_SECRET=replace_with_a_strong_secret
-JWT_EXPIRES_IN=7d
-DB_PATH=./school.db
+VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=your_project_id
+VITE_APPWRITE_DATABASE_ID=your_database_id
 ```
 
-Notes:
+Collection env values are optional when your Appwrite collection IDs match defaults in frontend/src/services/appwrite.ts.
 
-- If DB_PATH is relative, it resolves from the backend process working directory.
-- On first run, the backend creates schema and seed data automatically.
-
-### 4) Run both servers with one command
+### 4) Run frontend
 
 From the repository root:
 
@@ -104,18 +93,16 @@ From the repository root:
 npm run dev
 ```
 
-This command starts:
-
-- Frontend on http://localhost:5173
-- Backend on http://localhost:5000
+This starts frontend on http://localhost:5173 and uses Appwrite directly.
 
 ## Available Scripts
 
 From repository root:
 
-- npm run dev: Start frontend and backend concurrently
+- npm run dev: Start Appwrite-first frontend
 - npm run dev:frontend: Start frontend only
-- npm run dev:backend: Start backend only
+- npm run dev:backend: Start legacy backend only
+- npm run dev:legacy: Start frontend + legacy backend together
 
 From frontend/:
 
@@ -123,7 +110,7 @@ From frontend/:
 - npm run build: Type-check and build production bundle
 - npm run preview: Preview production build
 
-From backend/:
+From backend/ (legacy mode only):
 
 - npm run dev: Start API with nodemon
 - npm start: Start API with node
@@ -142,16 +129,27 @@ Example accounts:
 - Parent: james.mugisha@gmail.com
 - Student: emma.namukasa@brevian.ac.ug
 
-## API Health Check
+## Appwrite Collections
 
-- http://localhost:5000/api/health
+The frontend service expects these collections by default:
 
-Expected response includes:
+- users
+- students
+- classes
+- subjects
+- grades
+- attendance
+- fees
+- fee_payments
+- wellbeing_reports
+- behavior_records
+- messages
+- announcements
+- notifications
+- alerts
+- events
 
-- status
-- system
-- version
-- timestamp
+If your IDs differ, set the corresponding VITE_APPWRITE_COLLECTION_* values in frontend/.env.
 
 ## Security Notes
 
@@ -181,23 +179,27 @@ Then reopen the terminal and retry.
 
 ### Port conflict
 
-If 5173 or 5000 is already in use:
+If 5173 is already in use:
 
 - stop the existing process
-- or change PORT in backend/.env
-- and update frontend Vite proxy target if backend port changes
+- or run Vite with a different port
 
-## Deployment Guidance
+## Appwrite Sites Deployment
 
-This repository is currently optimized for local development and demo workflows.
+1. Push this repository to GitHub.
+2. In Appwrite Console, create a Site and connect your repository.
+3. Set build settings:
+- Root directory: frontend
+- Install command: npm install
+- Build command: npm run build
+- Output directory: dist
+4. Add Site environment variables from frontend/.env.example.
+5. Deploy and assign your custom domain.
 
-For production, recommended next steps:
+For Appwrite Auth to work in browser:
 
-- move secrets to managed environment variables
-- replace SQLite with managed Postgres/MySQL for multi-user scale
-- add API request validation and rate limiting
-- add CI checks (lint, test, build)
-- serve frontend static assets behind a reverse proxy
+- Add your Site domain to Appwrite platform settings.
+- Configure session/cookie domain according to your deployment domain.
 
 ## License
 
