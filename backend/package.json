@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "bootstrap:appwrite-users": "node scripts/bootstrap-appwrite-users.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -14,6 +15,7 @@
     "express": "^4.18.3",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "node-appwrite": "^22.1.3",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },

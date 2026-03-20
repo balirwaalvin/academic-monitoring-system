@@ -3,18 +3,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { GraduationCap, Eye, EyeOff, LogIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const demoUsers = [
-  { role: 'Admin', email: 'admin@brevian.ac.ug', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  { role: 'Teacher', email: 'sarah.namaganda@brevian.ac.ug', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { role: 'Counselor', email: 'counselor@brevian.ac.ug', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-  { role: 'Parent', email: 'james.mugisha@gmail.com', color: 'bg-green-100 text-green-700 border-green-200' },
-  { role: 'Student', email: 'emma.namukasa@brevian.ac.ug', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-];
-
 export default function Login() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@brevian.ac.ug');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -87,21 +79,6 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Demo Accounts */}
-        <div className="mt-5 bg-white/10 backdrop-blur rounded-xl p-4">
-          <p className="text-primary-200 text-xs font-medium mb-3 text-center uppercase tracking-wider">Demo Accounts (password: password123)</p>
-          <div className="grid grid-cols-1 gap-1.5">
-            {demoUsers.map(u => (
-              <button
-                key={u.role}
-                onClick={() => { setEmail(u.email); setPassword('password123'); }}
-                className={`text-left px-3 py-2 rounded-lg border text-xs transition-all hover:shadow-sm ${u.color}`}
-              >
-                <span className="font-semibold">{u.role}:</span> {u.email}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

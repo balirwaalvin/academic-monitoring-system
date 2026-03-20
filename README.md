@@ -201,6 +201,40 @@ For Appwrite Auth to work in browser:
 - Add your Site domain to Appwrite platform settings.
 - Configure session/cookie domain according to your deployment domain.
 
+## Restore Role Logins (Appwrite)
+
+If login fails because Appwrite Auth users were not created yet, run the bootstrap script once.
+
+1. Create backend/.env with:
+
+```env
+APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_server_api_key
+APPWRITE_DATABASE_ID=your_database_id
+APPWRITE_COLLECTION_USERS=users
+APPWRITE_COLLECTION_STUDENTS=students
+APPWRITE_BOOTSTRAP_PASSWORD=password123
+```
+
+2. Install backend dependencies:
+
+```bash
+npm --prefix backend install
+```
+
+3. Run bootstrap:
+
+```bash
+npm --prefix backend run bootstrap:appwrite-users
+```
+
+The script:
+
+- restores Admin, Teacher, Counselor, Parent accounts
+- resets their password to APPWRITE_BOOTSTRAP_PASSWORD
+- removes the Student account and student user docs
+
 ## License
 
 No license file is currently included.
