@@ -209,9 +209,52 @@ export const authApi = {
 };
 
 export const studentsApi = {
-  list: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.students, params)),
-  get: async (id: EntityId): ApiResult<Loose> => ok(await getById(appwrite.collections.students, id)),
+  list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const [students, classes] = await Promise.all([
+      listCollection(appwrite.collections.students, params),
+      listCollection(appwrite.collections.classes),
+    ]);
+
+    const classMap = new Map(classes.map((klass) => [String(klass.id), klass]));
+    const withClass = students.map((student) => {
+      const klass = classMap.get(String(student.class_id));
+      return {
+        ...student,
+        class_name: student.class_name || klass?.name || '',
+        grade_level: student.grade_level || klass?.grade_level || '',
+      };
+    });
+
+    return ok(withClass);
+  },
+
+  get: async (id: EntityId): ApiResult<Loose> => {
+    const student = await getById(appwrite.collections.students, id);
+    if (!student.class_name && student.class_id !== undefined && student.class_id !== null) {
+      try {
+        const klass = await getById(appwrite.collections.classes, student.class_id);
+        return ok({
+          ...student,
+          class_name: klass?.name || '',
+          grade_level: student.grade_level || klass?.grade_level || '',
+        });
+      } catch {
+        return ok(student);
+      }
+    }
+    return ok(student);
+  },
+
   create: async (data: Loose): ApiResult<Loose> => {
+    let klass: Loose | null = null;
+    if (data.class_id !== undefined && data.class_id !== null && String(data.class_id).trim() !== '') {
+      try {
+        klass = await getById(appwrite.collections.classes, Number(data.class_id));
+      } catch {
+        klass = null;
+      }
+    }
+
     const payload: Loose = {
       name: data.name,
       email: data.email,
@@ -220,6 +263,8 @@ export const studentsApi = {
       date_of_birth: data.date_of_birth,
       enrollment_date: data.enrollment_date || new Date().toISOString().slice(0, 10),
       status: data.status || 'active',
+      ...(klass?.name ? { class_name: klass.name } : {}),
+      ...(klass?.grade_level ? { grade_level: klass.grade_level } : {}),
     };
 
     if (data.class_id !== undefined && data.class_id !== null && String(data.class_id).trim() !== '') {

@@ -9,31 +9,38 @@ import type { Student, GradeSummary, AttendanceRecord, WellbeingReport, EarlyWar
 export default function StudentProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const studentId = parseInt(id!);
+  const studentId = String(id || '');
+
+  const isSameId = (a: unknown, b: unknown) => String(a ?? '') === String(b ?? '');
 
   const { data: student, isLoading } = useQuery<Student>({
     queryKey: ['student', studentId],
     queryFn: () => studentsApi.get(studentId).then(r => r.data),
+    enabled: Boolean(studentId),
   });
 
   const { data: gradeSummary } = useQuery<GradeSummary[]>({
     queryKey: ['grade-summary', studentId],
     queryFn: () => gradesApi.summary(studentId).then(r => r.data),
+    enabled: Boolean(studentId),
   });
 
   const { data: attendance } = useQuery<AttendanceRecord[]>({
     queryKey: ['attendance', studentId],
     queryFn: () => attendanceApi.list({ student_id: String(studentId) }).then(r => r.data),
+    enabled: Boolean(studentId),
   });
 
   const { data: wellbeing } = useQuery<WellbeingReport[]>({
     queryKey: ['wellbeing', studentId],
     queryFn: () => wellbeingApi.list({ student_id: String(studentId) }).then(r => r.data),
+    enabled: Boolean(studentId),
   });
 
   const { data: warnings } = useQuery<EarlyWarning[]>({
     queryKey: ['alerts', studentId],
     queryFn: () => alertsApi.list({ resolved: 'false' }).then(r => r.data),
+    enabled: Boolean(studentId),
   });
 
   if (isLoading) return <div className="text-center py-10 text-slate-500">Loading student profile...</div>;
@@ -103,7 +110,7 @@ export default function StudentProfile() {
           { label: 'Attendance', value: `${attRate}%`, color: attRate >= 85 ? 'text-green-600' : attRate >= 70 ? 'text-amber-600' : 'text-red-600' },
           { label: 'Days Present', value: presentCount, color: 'text-slate-800' },
           { label: 'Days Absent', value: absentCount, color: absentCount > 5 ? 'text-red-600' : 'text-slate-800' },
-          { label: 'Active Warnings', value: (warnings?.filter(w => w.student_id === studentId) || []).length, color: 'text-red-600' },
+          { label: 'Active Warnings', value: (warnings?.filter(w => isSameId(w.student_id, studentId)) || []).length, color: 'text-red-600' },
         ].map(s => (
           <div key={s.label} className="card p-4 text-center">
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
