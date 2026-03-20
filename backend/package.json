@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "bootstrap:appwrite-users": "node scripts/bootstrap-appwrite-users.js"
+    "bootstrap:appwrite-users": "node scripts/bootstrap-appwrite-users.js",
+    "provision:appwrite-schema": "node scripts/provision-appwrite-schema.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

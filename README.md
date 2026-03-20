@@ -235,6 +235,45 @@ The script:
 - resets their password to APPWRITE_BOOTSTRAP_PASSWORD
 - removes the Student account and student user docs
 
+## Auto Create Appwrite Schema
+
+To avoid creating collections manually in Appwrite Console, run schema provisioning from code.
+
+1. Create backend/.env with:
+
+```env
+APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_server_api_key
+APPWRITE_DATABASE_ID=your_database_id
+APPWRITE_DATABASE_NAME=swam_mis
+
+APPWRITE_COLLECTION_USERS=users
+APPWRITE_COLLECTION_STUDENTS=students
+APPWRITE_COLLECTION_CLASSES=classes
+APPWRITE_COLLECTION_SUBJECTS=subjects
+APPWRITE_COLLECTION_GRADES=grades
+APPWRITE_COLLECTION_ATTENDANCE=attendance
+APPWRITE_COLLECTION_FEES=fees
+APPWRITE_COLLECTION_FEE_PAYMENTS=fee_payments
+APPWRITE_COLLECTION_WELLBEING=wellbeing_reports
+APPWRITE_COLLECTION_BEHAVIOR=behavior_records
+APPWRITE_COLLECTION_MESSAGES=messages
+APPWRITE_COLLECTION_ANNOUNCEMENTS=announcements
+APPWRITE_COLLECTION_NOTIFICATIONS=notifications
+APPWRITE_COLLECTION_ALERTS=alerts
+APPWRITE_COLLECTION_EVENTS=events
+```
+
+2. Run:
+
+```bash
+npm --prefix backend install
+npm --prefix backend run provision:appwrite-schema
+```
+
+This command creates the Appwrite database, all required collections, and all core attributes used by the frontend.
+
 ## License
 
 No license file is currently included.
