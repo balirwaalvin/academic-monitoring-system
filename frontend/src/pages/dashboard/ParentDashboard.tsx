@@ -13,7 +13,8 @@ export default function ParentDashboard() {
   const parentProfile = profile as ParentProfile | null;
   const navigate = useNavigate();
 
-  const firstChildId = parentProfile?.children?.[0]?.student_id;
+  const children = parentProfile?.children || [];
+  const firstChildId = children[0]?.student_id;
 
   const { data: gradeSummary } = useQuery<GradeSummary[]>({
     queryKey: ['grade-summary', firstChildId],
@@ -51,19 +52,26 @@ export default function ParentDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Children tabs */}
-      {parentProfile?.children && parentProfile.children.length > 1 && (
-        <div className="card p-4">
-          <p className="text-sm font-medium text-slate-600 mb-2">Your Children</p>
-          <div className="flex gap-2">
-            {parentProfile.children.map(c => (
-              <button key={c.student_id} className="btn-secondary btn-sm" onClick={() => navigate(`/students/${c.student_id}`)}>
-                {c.name} — {c.class_name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Child follow-up context */}
+      <div className="card p-4">
+        <p className="text-sm font-medium text-slate-600 mb-2">Child Follow-up</p>
+        {children.length === 0 ? (
+          <p className="text-sm text-slate-500">No linked child found for this parent account yet.</p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-700 mb-3">
+              Following up on: <span className="font-semibold">{children.map((c) => c.name).join(', ')}</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {children.map((c) => (
+                <button key={c.student_id} className="btn-secondary btn-sm" onClick={() => navigate(`/students/${c.student_id}`)}>
+                  {c.name} — {c.class_name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Overall Average" value={gradeSummary ? `${Math.round(gradeSummary.reduce((s, g) => s + g.overall_avg, 0) / Math.max(gradeSummary.length, 1))}%` : 'N/A'} icon={<BookOpen className="w-5 h-5" />} color="blue" />
