@@ -142,7 +142,18 @@ export default {
 
 export const authApi = {
   login: async (email: string, password: string): ApiResult<Loose> => {
-    await appwrite.account.createEmailPasswordSession(email, password);
+    try {
+      await appwrite.account.createEmailPasswordSession(email, password);
+    } catch (error: any) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('session is active') || message.includes('session is prohibited')) {
+        await appwrite.account.deleteSession('current');
+        await appwrite.account.createEmailPasswordSession(email, password);
+      } else {
+        throw error;
+      }
+    }
+
     const user = await getCurrentProfile();
     if (!user) {
       throw new Error('No user profile found in Appwrite users collection for this account.');

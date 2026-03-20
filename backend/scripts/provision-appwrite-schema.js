@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const sdk = require('node-appwrite');
 
@@ -123,7 +124,7 @@ const collections = [
       { type: 'string', key: 'academic_year', size: 20 },
       { type: 'string', key: 'assessment_type', size: 40 },
       { type: 'integer', key: 'recorded_by' },
-      { type: 'string', key: 'notes', size: 5000 },
+      { type: 'string', key: 'notes', size: 1500 },
       { type: 'string', key: 'recorded_at', size: 40 },
       { type: 'string', key: 'subject_name', size: 120 },
       { type: 'string', key: 'subject_code', size: 40 },
@@ -159,7 +160,7 @@ const collections = [
       { type: 'string', key: 'due_date', size: 20, required: true },
       { type: 'string', key: 'term', size: 20, required: true },
       { type: 'string', key: 'academic_year', size: 20 },
-      { type: 'string', key: 'description', size: 5000 },
+      { type: 'string', key: 'description', size: 1000 },
       { type: 'float', key: 'amount_paid', required: false, min: 0, max: 1000000000, xdefault: 0 },
       { type: 'float', key: 'balance', required: false, min: 0, max: 1000000000, xdefault: 0 },
       { type: 'string', key: 'payment_status', size: 20 },
@@ -180,7 +181,7 @@ const collections = [
       { type: 'string', key: 'reference_number', size: 120 },
       { type: 'integer', key: 'received_by' },
       { type: 'string', key: 'received_by_name', size: 120 },
-      { type: 'string', key: 'notes', size: 5000 },
+      { type: 'string', key: 'notes', size: 1500 },
       { type: 'string', key: 'created_at', size: 40 },
     ],
   },
@@ -193,8 +194,8 @@ const collections = [
       { type: 'string', key: 'session_date', size: 20, required: true },
       { type: 'integer', key: 'mood_rating' },
       { type: 'string', key: 'concern_type', size: 120 },
-      { type: 'string', key: 'description', size: 10000 },
-      { type: 'string', key: 'interventions', size: 10000 },
+      { type: 'string', key: 'description', size: 1500 },
+      { type: 'string', key: 'interventions', size: 1500 },
       { type: 'string', key: 'follow_up_date', size: 20 },
       { type: 'integer', key: 'is_confidential', required: false, min: 0, max: 1, xdefault: 1 },
       { type: 'string', key: 'status', size: 20 },
@@ -212,8 +213,8 @@ const collections = [
       { type: 'integer', key: 'student_id' },
       { type: 'string', key: 'incident_date', size: 20, required: true },
       { type: 'enum', key: 'incident_type', elements: ['positive', 'negative', 'neutral'], required: true },
-      { type: 'string', key: 'description', size: 10000, required: true },
-      { type: 'string', key: 'action_taken', size: 5000 },
+      { type: 'string', key: 'description', size: 1500, required: true },
+      { type: 'string', key: 'action_taken', size: 1000 },
       { type: 'integer', key: 'recorded_by' },
       { type: 'integer', key: 'parent_notified', required: false, min: 0, max: 1, xdefault: 0 },
       { type: 'string', key: 'student_name', size: 120 },
@@ -230,7 +231,7 @@ const collections = [
       { type: 'integer', key: 'sender_id' },
       { type: 'integer', key: 'receiver_id' },
       { type: 'string', key: 'subject', size: 255 },
-      { type: 'string', key: 'content', size: 20000, required: true },
+      { type: 'string', key: 'content', size: 4000, required: true },
       { type: 'integer', key: 'is_read', required: false, min: 0, max: 1, xdefault: 0 },
       { type: 'string', key: 'sender_name', size: 120 },
       { type: 'string', key: 'receiver_name', size: 120 },
@@ -243,7 +244,7 @@ const collections = [
     name: 'Announcements',
     attributes: [
       { type: 'string', key: 'title', size: 255, required: true },
-      { type: 'string', key: 'content', size: 20000, required: true },
+      { type: 'string', key: 'content', size: 4000, required: true },
       { type: 'integer', key: 'created_by' },
       { type: 'string', key: 'target_roles', size: 255 },
       { type: 'enum', key: 'priority', elements: ['low', 'normal', 'medium', 'high', 'urgent'], required: false },
@@ -260,7 +261,7 @@ const collections = [
     attributes: [
       { type: 'integer', key: 'user_id' },
       { type: 'string', key: 'title', size: 255, required: true },
-      { type: 'string', key: 'message', size: 5000, required: true },
+      { type: 'string', key: 'message', size: 1200, required: true },
       { type: 'enum', key: 'type', elements: ['alert', 'info', 'warning', 'success'], required: false },
       { type: 'integer', key: 'is_read', required: false, min: 0, max: 1, xdefault: 0 },
       { type: 'string', key: 'related_type', size: 80 },
@@ -273,7 +274,7 @@ const collections = [
     name: 'Events',
     attributes: [
       { type: 'string', key: 'title', size: 255, required: true },
-      { type: 'string', key: 'description', size: 10000 },
+      { type: 'string', key: 'description', size: 1500 },
       { type: 'string', key: 'event_date', size: 20, required: true },
       { type: 'string', key: 'start_date', size: 20 },
       { type: 'string', key: 'end_date', size: 20 },
@@ -293,14 +294,14 @@ const collections = [
       { type: 'integer', key: 'student_id' },
       { type: 'string', key: 'warning_type', size: 120, required: true },
       { type: 'enum', key: 'severity', elements: ['low', 'medium', 'high', 'critical'], required: false },
-      { type: 'string', key: 'description', size: 10000, required: true },
+      { type: 'string', key: 'description', size: 1500, required: true },
       { type: 'string', key: 'triggered_at', size: 40 },
       { type: 'integer', key: 'is_resolved', required: false, min: 0, max: 1, xdefault: 0 },
       { type: 'boolean', key: 'resolved', required: false, xdefault: false },
       { type: 'integer', key: 'resolved_by' },
       { type: 'string', key: 'resolved_at', size: 40 },
-      { type: 'string', key: 'notes', size: 5000 },
-      { type: 'string', key: 'resolution_notes', size: 5000 },
+      { type: 'string', key: 'notes', size: 1200 },
+      { type: 'string', key: 'resolution_notes', size: 1200 },
       { type: 'string', key: 'student_name', size: 120 },
       { type: 'string', key: 'student_number', size: 50 },
       { type: 'string', key: 'class_name', size: 120 },
@@ -313,6 +314,11 @@ function isAlreadyExists(error) {
   const msg = String(error?.message || '').toLowerCase();
   const code = Number(error?.code || 0);
   return code === 409 || msg.includes('already exists') || msg.includes('duplicate');
+}
+
+function isAttributeLimitError(error) {
+  const msg = String(error?.message || '').toLowerCase();
+  return msg.includes('maximum number or size of attributes');
 }
 
 async function ensureDatabase() {
@@ -390,6 +396,10 @@ async function ensureAttributes(collection) {
     } catch (error) {
       if (isAlreadyExists(error)) {
         continue;
+      }
+      if (isAttributeLimitError(error)) {
+        console.warn(`  Skipped remaining attributes for ${collection.id}: ${error.message}`);
+        break;
       }
       throw error;
     }
