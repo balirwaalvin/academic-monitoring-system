@@ -140,7 +140,21 @@ const buildRoleProfile = async (user: Loose | null): Promise<Loose | null> => {
 
   if (user.role === 'parent') {
     try {
-      const children = await listCollection(appwrite.collections.students, { parent_id: String(user.id) });
+      let children = await listCollection(appwrite.collections.students, { parent_id: String(user.id) });
+
+      // Some records may only have parent contact fields when parent_id couldn't be stored.
+      if (!children.length) {
+        const allStudents = await listCollection(appwrite.collections.students);
+        const email = String(user.email || '').trim().toLowerCase();
+        const name = String(user.name || '').trim().toLowerCase();
+
+        children = allStudents.filter((student) => {
+          const parentEmail = String(student.parent_email || '').trim().toLowerCase();
+          const parentName = String(student.parent_name || '').trim().toLowerCase();
+          return (email && parentEmail === email) || (name && parentName === name);
+        });
+      }
+
       return {
         children: children.map((child) => ({
           student_id: child.id,
