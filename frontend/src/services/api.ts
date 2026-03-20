@@ -99,13 +99,21 @@ const deleteIn = async (collectionId: string, id: EntityId): Promise<void> => {
 };
 
 const getCurrentProfile = async (): Promise<Loose | null> => {
+  const account = await appwrite.account.get();
+  let allUsers: Loose[] = [];
+
   try {
-    const account = await appwrite.account.get();
-    const allUsers = await listCollection(appwrite.collections.users);
-    return allUsers.find((u) => u.appwrite_user_id === account.$id || u.email === account.email) || null;
-  } catch {
-    return null;
+    allUsers = await listCollection(appwrite.collections.users);
+  } catch (error: any) {
+    const msg = error?.message || 'Unknown error';
+    throw new Error(`Cannot read Appwrite users collection (${appwrite.collections.users}): ${msg}`);
   }
+
+  const accountEmail = String(account.email || '').trim().toLowerCase();
+  return allUsers.find((u) => {
+    const profileEmail = String(u.email || '').trim().toLowerCase();
+    return String(u.appwrite_user_id || '') === account.$id || profileEmail === accountEmail;
+  }) || null;
 };
 
 const buildRoleProfile = async (user: Loose | null): Promise<Loose | null> => {
@@ -156,7 +164,7 @@ export const authApi = {
 
     const user = await getCurrentProfile();
     if (!user) {
-      throw new Error('No user profile found in Appwrite users collection for this account.');
+      throw new Error('No user profile found for this auth account. Ensure the users collection has a document with matching email or appwrite_user_id, and collection read permissions allow signed-in users.');
     }
     const profile = await buildRoleProfile(user);
     return ok({ token: 'appwrite-session', user, profile });
