@@ -46,6 +46,13 @@ const client = new sdk.Client()
 
 const db = new sdk.Databases(client);
 
+const defaultCollectionPermissions = [
+  sdk.Permission.create(sdk.Role.users()),
+  sdk.Permission.read(sdk.Role.users()),
+  sdk.Permission.update(sdk.Role.users()),
+  sdk.Permission.delete(sdk.Role.users()),
+];
+
 const collections = [
   {
     id: APPWRITE_COLLECTION_USERS,
@@ -338,10 +345,26 @@ async function ensureDatabase() {
 async function ensureCollection(collection) {
   try {
     await db.getCollection(APPWRITE_DATABASE_ID, collection.id);
+    await db.updateCollection(
+      APPWRITE_DATABASE_ID,
+      collection.id,
+      collection.name,
+      defaultCollectionPermissions,
+      false,
+      true
+    );
     console.log(`Collection exists: ${collection.id}`);
+    console.log(`  Synced permissions for: ${collection.id}`);
   } catch (error) {
     if (Number(error?.code || 0) === 404) {
-      await db.createCollection(APPWRITE_DATABASE_ID, collection.id, collection.name, [], false, true);
+      await db.createCollection(
+        APPWRITE_DATABASE_ID,
+        collection.id,
+        collection.name,
+        defaultCollectionPermissions,
+        false,
+        true
+      );
       console.log(`Created collection: ${collection.id}`);
       return;
     }

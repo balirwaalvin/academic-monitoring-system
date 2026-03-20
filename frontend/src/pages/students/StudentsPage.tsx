@@ -41,7 +41,7 @@ export default function StudentsPage() {
   const createMutation = useMutation({
     mutationFn: (data: typeof form) => studentsApi.create(data),
     onSuccess: () => { toast.success('Student created successfully'); qc.invalidateQueries({ queryKey: ['students'] }); setShowAdd(false); setForm({ name: '', email: '', student_number: '', class_id: '', parent_id: '', date_of_birth: '', gender: '' }); },
-    onError: (e: { response?: { data?: { error?: string } } }) => toast.error(e.response?.data?.error || 'Failed to create student'),
+    onError: (e: any) => toast.error(e?.response?.data?.error || e?.message || 'Failed to create student'),
   });
 
   const linkParentMutation = useMutation({

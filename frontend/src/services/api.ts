@@ -83,8 +83,18 @@ const getById = async (collectionId: string, id: EntityId): Promise<Loose> => {
 
 const createIn = async (collectionId: string, data: Loose): Promise<Loose> => {
   ensureAppwriteConfigured();
-  const doc = await appwrite.databases.createDocument(appwrite.databaseId, collectionId, appwrite.id.unique(), data);
-  return normalizeDoc(doc as Loose);
+  try {
+    const doc = await appwrite.databases.createDocument(appwrite.databaseId, collectionId, appwrite.id.unique(), data);
+    return normalizeDoc(doc as Loose);
+  } catch (error: any) {
+    const message = String(error?.message || '');
+    if (message.includes("No permissions provided for action 'create'")) {
+      throw new Error(
+        `Cannot create document in '${collectionId}'. Appwrite collection permissions are missing create access for this user role. Run backend provisioning again or add create permission in Appwrite Console.`
+      );
+    }
+    throw error;
+  }
 };
 
 const updateIn = async (collectionId: string, id: EntityId, data: Loose): Promise<Loose> => {
@@ -201,7 +211,30 @@ export const authApi = {
 export const studentsApi = {
   list: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.students, params)),
   get: async (id: EntityId): ApiResult<Loose> => ok(await getById(appwrite.collections.students, id)),
-  create: async (data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.students, data)),
+  create: async (data: Loose): ApiResult<Loose> => {
+    const payload: Loose = {
+      name: data.name,
+      email: data.email,
+      student_number: data.student_number,
+      gender: data.gender,
+      date_of_birth: data.date_of_birth,
+      enrollment_date: data.enrollment_date || new Date().toISOString().slice(0, 10),
+      status: data.status || 'active',
+    };
+
+    if (data.class_id !== undefined && data.class_id !== null && String(data.class_id).trim() !== '') {
+      payload.class_id = Number(data.class_id);
+    }
+
+    if (data.parent_id !== undefined && data.parent_id !== null && String(data.parent_id).trim() !== '') {
+      payload.parent_id = Number(data.parent_id);
+    }
+
+    if (!payload.gender) delete payload.gender;
+    if (!payload.date_of_birth) delete payload.date_of_birth;
+
+    return ok(await createIn(appwrite.collections.students, payload));
+  },
   update: async (id: EntityId, data: Loose): ApiResult<Loose> => ok(await updateIn(appwrite.collections.students, id, data)),
 };
 
