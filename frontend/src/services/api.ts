@@ -229,15 +229,37 @@ export const studentsApi = {
       listCollection(appwrite.collections.classes),
     ]);
 
-    const classMap = new Map(classes.map((klass) => [String(klass.id), klass]));
+    const classMap = new Map<string, Loose>();
+    classes.forEach((klass) => {
+      classMap.set(String(klass.id), klass);
+      if (klass.appwrite_id) classMap.set(String(klass.appwrite_id), klass);
+    });
+
+    const updates: Promise<Loose>[] = [];
     const withClass = students.map((student) => {
       const klass = classMap.get(String(student.class_id));
+      const className = student.class_name || klass?.name || '';
+      const gradeLevel = student.grade_level || klass?.grade_level || '';
+
+      if (klass && (!student.class_name || !student.grade_level)) {
+        updates.push(
+          updateIn(appwrite.collections.students, student.id, {
+            class_name: className,
+            grade_level: gradeLevel,
+          })
+        );
+      }
+
       return {
         ...student,
-        class_name: student.class_name || klass?.name || '',
-        grade_level: student.grade_level || klass?.grade_level || '',
+        class_name: className,
+        grade_level: gradeLevel,
       };
     });
+
+    if (updates.length) {
+      await Promise.allSettled(updates);
+    }
 
     return ok(withClass);
   },
@@ -260,14 +282,20 @@ export const studentsApi = {
   },
 
   create: async (data: Loose): ApiResult<Loose> => {
-    let klass: Loose | null = null;
-    if (data.class_id !== undefined && data.class_id !== null && String(data.class_id).trim() !== '') {
-      try {
-        klass = await getById(appwrite.collections.classes, Number(data.class_id));
-      } catch {
-        klass = null;
-      }
+    if (data.class_id === undefined || data.class_id === null || String(data.class_id).trim() === '') {
+      throw new Error('Class is required when registering a student.');
     }
+
+    const classes = await listCollection(appwrite.collections.classes);
+    const classRef = String(data.class_id);
+    const klass = classes.find((item) => String(item.id) === classRef || String(item.appwrite_id || '') === classRef);
+
+    if (!klass) {
+      throw new Error('Selected class was not found. Refresh classes and try again.');
+    }
+
+    const numericClassId = Number(klass.id);
+    const hasNumericClassId = !Number.isNaN(numericClassId);
 
     const payload: Loose = {
       name: data.name,
@@ -277,12 +305,12 @@ export const studentsApi = {
       date_of_birth: data.date_of_birth,
       enrollment_date: data.enrollment_date || new Date().toISOString().slice(0, 10),
       status: data.status || 'active',
-      ...(klass?.name ? { class_name: klass.name } : {}),
-      ...(klass?.grade_level ? { grade_level: klass.grade_level } : {}),
+      class_name: klass.name || '',
+      grade_level: klass.grade_level || '',
     };
 
-    if (data.class_id !== undefined && data.class_id !== null && String(data.class_id).trim() !== '') {
-      payload.class_id = Number(data.class_id);
+    if (hasNumericClassId) {
+      payload.class_id = numericClassId;
     }
 
     if (data.parent_id !== undefined && data.parent_id !== null && String(data.parent_id).trim() !== '') {
@@ -294,7 +322,30 @@ export const studentsApi = {
 
     return ok(await createIn(appwrite.collections.students, payload));
   },
-  update: async (id: EntityId, data: Loose): ApiResult<Loose> => ok(await updateIn(appwrite.collections.students, id, data)),
+  update: async (id: EntityId, data: Loose): ApiResult<Loose> => {
+    const payload: Loose = { ...data };
+
+    if (payload.class_id !== undefined && payload.class_id !== null && String(payload.class_id).trim() !== '') {
+      const classes = await listCollection(appwrite.collections.classes);
+      const classRef = String(payload.class_id);
+      const klass = classes.find((item) => String(item.id) === classRef || String(item.appwrite_id || '') === classRef);
+
+      if (!klass) {
+        throw new Error('Selected class was not found.');
+      }
+
+      const numericClassId = Number(klass.id);
+      if (!Number.isNaN(numericClassId)) {
+        payload.class_id = numericClassId;
+      } else {
+        delete payload.class_id;
+      }
+      payload.class_name = klass.name || '';
+      payload.grade_level = klass.grade_level || '';
+    }
+
+    return ok(await updateIn(appwrite.collections.students, id, payload));
+  },
 };
 
 export const classesApi = {

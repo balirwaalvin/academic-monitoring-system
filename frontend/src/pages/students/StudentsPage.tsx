@@ -18,6 +18,7 @@ export default function StudentsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [classEdits, setClassEdits] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', email: '', student_number: '', class_id: '', parent_id: '', date_of_birth: '', gender: '' });
   const [parentForm, setParentForm] = useState({ name: '', email: '', phone: '', address: '', password: 'password123' });
 
@@ -59,6 +60,18 @@ export default function StudentsPage() {
     onError: (e: any) => toast.error(e?.message || 'Failed to create/link parent account'),
   });
 
+  const updateClassMutation = useMutation({
+    mutationFn: ({ studentId, classId }: { studentId: number; classId: string }) => {
+      if (!classId) throw new Error('Please select a class.');
+      return studentsApi.update(studentId, { class_id: classId });
+    },
+    onSuccess: () => {
+      toast.success('Student class updated');
+      qc.invalidateQueries({ queryKey: ['students'] });
+    },
+    onError: (e: any) => toast.error(e?.message || 'Failed to update class'),
+  });
+
   const openParentModal = (student: Student) => {
     setSelectedStudent(student);
     setParentForm({
@@ -69,6 +82,58 @@ export default function StudentsPage() {
       password: 'password123',
     });
     setShowParentModal(true);
+  };
+
+  const getStudentClassLabel = (student: Student): string => {
+    const row = student as Student & {
+      className?: unknown;
+      class?: unknown;
+      class_label?: unknown;
+      classId?: unknown;
+      appwrite_id?: unknown;
+    };
+
+    const direct = row.class_name ?? row.className ?? row.class_label;
+    if (typeof direct === 'string' && direct.trim()) return direct;
+
+    if (typeof row.class === 'string' && row.class.trim()) return row.class;
+    if (row.class && typeof row.class === 'object' && 'name' in (row.class as Record<string, unknown>)) {
+      const nestedName = (row.class as Record<string, unknown>).name;
+      if (typeof nestedName === 'string' && nestedName.trim()) return nestedName;
+    }
+
+    const classRef = row.class_id ?? row.classId;
+    if (classRef !== undefined && classRef !== null && String(classRef).trim() !== '') {
+      const matched = classes.find((c) => {
+        const withMeta = c as Class & { appwrite_id?: unknown };
+        return String(c.id) === String(classRef) || String(withMeta.appwrite_id ?? '') === String(classRef);
+      });
+      if (matched?.name) return matched.name;
+    }
+
+    return '—';
+  };
+
+  const getStudentClassId = (student: Student): string => {
+    const row = student as Student & {
+      classId?: unknown;
+      class?: unknown;
+    };
+
+    if (row.class_id !== undefined && row.class_id !== null && String(row.class_id).trim() !== '') {
+      return String(row.class_id);
+    }
+    if (row.classId !== undefined && row.classId !== null && String(row.classId).trim() !== '') {
+      return String(row.classId);
+    }
+    if (row.class && typeof row.class === 'object' && 'id' in (row.class as Record<string, unknown>)) {
+      const nestedId = (row.class as Record<string, unknown>).id;
+      if (nestedId !== undefined && nestedId !== null && String(nestedId).trim() !== '') return String(nestedId);
+    }
+
+    const classLabel = getStudentClassLabel(student);
+    const byName = classes.find((c) => c.name === classLabel);
+    return byName ? String(byName.id) : '';
   };
 
   return (
@@ -131,7 +196,30 @@ export default function StudentsPage() {
                     </div>
                   </td>
                   <td className="table-td"><span className="font-mono text-xs">{s.student_number}</span></td>
-                  <td className="table-td">{s.class_name || '—'}</td>
+                  <td className="table-td">
+                    {user?.role === 'admin' ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="select min-w-[10rem]"
+                          value={classEdits[String(s.id)] ?? getStudentClassId(s)}
+                          onChange={(e) => setClassEdits((prev) => ({ ...prev, [String(s.id)]: e.target.value }))}
+                        >
+                          <option value="">Select class</option>
+                          {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          disabled={updateClassMutation.isPending || !(classEdits[String(s.id)] ?? getStudentClassId(s)) || (classEdits[String(s.id)] ?? getStudentClassId(s)) === getStudentClassId(s)}
+                          onClick={() => updateClassMutation.mutate({ studentId: s.id, classId: String(classEdits[String(s.id)] ?? getStudentClassId(s)) })}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      getStudentClassLabel(s)
+                    )}
+                  </td>
                   <td className="table-td">
                     <div>
                       <p className="text-sm">{s.parent_name || '—'}</p>
@@ -177,7 +265,7 @@ export default function StudentsPage() {
             <input className="input" value={form.student_number} onChange={e => setForm(f => ({ ...f, student_number: e.target.value }))} placeholder="STU-2026-010" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Class</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Class *</label>
             <select className="select" value={form.class_id} onChange={e => setForm(f => ({ ...f, class_id: e.target.value }))}>
               <option value="">Select class</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -200,7 +288,17 @@ export default function StudentsPage() {
         </div>
         <p className="text-xs text-slate-500 mt-4">Default password will be <code className="bg-slate-100 px-1 rounded">password123</code></p>
         <div className="flex gap-3 mt-5">
-          <button onClick={() => createMutation.mutate(form)} disabled={createMutation.isPending} className="btn-primary">
+          <button
+            onClick={() => {
+              if (!form.class_id) {
+                toast.error('Please select a class before creating a student');
+                return;
+              }
+              createMutation.mutate(form);
+            }}
+            disabled={createMutation.isPending}
+            className="btn-primary"
+          >
             {createMutation.isPending ? 'Creating...' : 'Create Student'}
           </button>
           <button onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
