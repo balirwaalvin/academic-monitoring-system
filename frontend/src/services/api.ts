@@ -399,7 +399,53 @@ export const classesApi = {
 };
 
 export const gradesApi = {
-  list: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.grades, params)),
+  list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const grades = await listCollection(appwrite.collections.grades, params);
+
+    let user: Loose | null = null;
+    try {
+      user = await getCurrentProfile();
+    } catch {
+      return ok(grades);
+    }
+
+    if (!user || user.role !== 'parent') {
+      return ok(grades);
+    }
+
+    let parentProfile: Loose | null = null;
+    try {
+      parentProfile = await buildRoleProfile(user);
+    } catch {
+      return ok([]);
+    }
+
+    const children = Array.isArray(parentProfile?.children) ? parentProfile.children : [];
+    if (!children.length) {
+      return ok([]);
+    }
+
+    const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+
+    const scopedGrades = grades.filter((grade) => {
+      const gradeStudentId = normalize(grade.student_id);
+      const gradeStudentNumber = normalize(grade.student_number);
+      const gradeStudentName = normalize(grade.student_name);
+
+      return children.some((child: Loose) => {
+        const childId = normalize(child.student_id);
+        const childStudentNumber = normalize(child.student_number);
+        const childName = normalize(child.name);
+        return (
+          (childId && childId === gradeStudentId)
+          || (childStudentNumber && childStudentNumber === gradeStudentNumber)
+          || (childName && childName === gradeStudentName)
+        );
+      });
+    });
+
+    return ok(scopedGrades);
+  },
 
   summary: async (studentId: EntityId): ApiResult<Loose[]> => {
     const grades = await listCollection(appwrite.collections.grades, { student_id: String(studentId) });

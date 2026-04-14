@@ -6,10 +6,10 @@ import Modal from '../../components/common/Modal';
 import { GradeBadge } from '../../components/common/Badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { classesApi, gradesApi, studentsApi } from '../../services/api';
-import type { Class, Grade, Student, Subject } from '../../types';
+import type { Class, Grade, ParentProfile, Student, Subject } from '../../types';
 
 export default function GradesPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const qc = useQueryClient();
 
   const [showModal, setShowModal] = useState(false);
@@ -28,7 +28,15 @@ export default function GradesPage() {
   });
 
   const isAdminOrTeacher = ['admin', 'teacher'].includes(user?.role || '');
+  const isParent = user?.role === 'parent';
   const normalizeId = (value: unknown): string => String(value ?? '').trim();
+  const normalizeName = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+
+  const parentChildren = useMemo(() => {
+    if (!isParent) return [];
+    const parentProfile = (profile as ParentProfile | null) || null;
+    return parentProfile?.children || [];
+  }, [isParent, profile]);
 
   const { data: grades = [], isLoading } = useQuery<Grade[]>({
     queryKey: ['grades', filterTerm, filterType],
@@ -58,7 +66,50 @@ export default function GradesPage() {
     }
   }, [classesQuery.isError]);
 
+  const gradeBelongsToParentChild = (
+    grade: Grade,
+    child: { student_id: number; student_number: string; name: string; class_name: string }
+  ) => {
+    const childId = normalizeId(child.student_id);
+    const childStudentNumber = normalizeId(child.student_number);
+    const childName = normalizeName(child.name);
+
+    const gradeId = normalizeId(grade.student_id);
+    const gradeStudentNumber = normalizeId(grade.student_number);
+    const gradeName = normalizeName(grade.student_name);
+
+    return (
+      (childId && gradeId === childId)
+      || (childStudentNumber && gradeStudentNumber === childStudentNumber)
+      || (childName && gradeName === childName)
+    );
+  };
+
+  const roleScopedGrades = useMemo(() => {
+    if (!isParent) return grades;
+    if (!parentChildren.length) return [];
+    return grades.filter((grade) => parentChildren.some((child) => gradeBelongsToParentChild(grade, child)));
+  }, [grades, isParent, parentChildren]);
+
   const classOptions = useMemo(() => {
+    if (isParent) {
+      const options = new Map<string, { value: string; name: string }>();
+
+      roleScopedGrades.forEach((grade) => {
+        const className = String(grade.class_name || '').trim();
+        if (!className) return;
+        options.set(className, { value: className, name: className });
+      });
+
+      parentChildren.forEach((child) => {
+        const className = String(child.class_name || '').trim();
+        if (!className) return;
+        options.set(className, { value: className, name: className });
+      });
+
+      return [...options.values()];
+    }
+
     if (classes.length > 0) {
       return classes.map((klass) => ({ value: normalizeId(klass.id), name: klass.name || `Class ${klass.id}` }));
     }
@@ -71,7 +122,7 @@ export default function GradesPage() {
       if (!fallback.has(classId)) fallback.set(classId, { value: classId, name: className });
     });
     return [...fallback.values()];
-  }, [classes, students]);
+  }, [classes, students, isParent, roleScopedGrades, parentChildren]);
 
   const classNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -125,18 +176,26 @@ export default function GradesPage() {
     return !!studentName && studentName === gradeName;
   };
 
+  const selectedParentChildForFilter = parentChildren.find((child) => normalizeId(child.student_id) === filterStudent);
   const selectedStudentForFilter = students.find((s) => normalizeId(s.id) === filterStudent);
 
-  const filteredGrades = grades.filter((g) => {
-    const classMatch = !filterClass || (g.class_name && g.class_name === classNameById.get(filterClass));
+  const filteredGrades = roleScopedGrades.filter((g) => {
+    const classMatch = !filterClass || normalizeName(g.class_name) === normalizeName(classNameById.get(filterClass));
     const studentMatch = !filterStudent
-      || (selectedStudentForFilter ? gradeBelongsToStudent(g, selectedStudentForFilter) : normalizeId(g.student_id) === filterStudent);
+      || (isParent
+        ? (selectedParentChildForFilter ? gradeBelongsToParentChild(g, selectedParentChildForFilter) : normalizeId(g.student_id) === filterStudent)
+        : (selectedStudentForFilter ? gradeBelongsToStudent(g, selectedStudentForFilter) : normalizeId(g.student_id) === filterStudent));
     const termMatch = !filterTerm || g.term === filterTerm;
     const typeMatch = !filterType || g.assessment_type === filterType;
     return classMatch && studentMatch && termMatch && typeMatch;
   });
 
   const availableStudentsForFilter = useMemo(() => {
+    if (isParent) {
+      if (!filterClass) return parentChildren;
+      return parentChildren.filter((child) => normalizeName(child.class_name) === normalizeName(filterClass));
+    }
+
     if (!filterClass) return students;
     const selectedClassName = classNameById.get(filterClass) || '';
     const byClass = students.filter((s) => {
@@ -145,7 +204,7 @@ export default function GradesPage() {
       return idMatch || nameMatch;
     });
     return byClass.length ? byClass : students;
-  }, [students, filterClass, classNameById]);
+  }, [students, filterClass, classNameById, isParent, parentChildren]);
 
   const mutation = useMutation({
     mutationFn: (d: {
@@ -233,16 +292,21 @@ export default function GradesPage() {
       return;
     }
 
-    const rows = selectedStudentForFilter
-      ? filteredGrades.filter((g) => gradeBelongsToStudent(g, selectedStudentForFilter))
-      : filteredGrades.filter((g) => normalizeId(g.student_id) === filterStudent);
+    const rows = isParent
+      ? (selectedParentChildForFilter
+        ? filteredGrades.filter((g) => gradeBelongsToParentChild(g, selectedParentChildForFilter))
+        : filteredGrades.filter((g) => normalizeId(g.student_id) === filterStudent))
+      : (selectedStudentForFilter
+        ? filteredGrades.filter((g) => gradeBelongsToStudent(g, selectedStudentForFilter))
+        : filteredGrades.filter((g) => normalizeId(g.student_id) === filterStudent));
+
     if (!rows.length) {
       toast.error('No grades found for the selected student');
       return;
     }
 
     const datePart = new Date().toISOString().slice(0, 10);
-    const studentLabel = selectedStudentForFilter?.name || rows[0]?.student_name || 'Student';
+    const studentLabel = selectedParentChildForFilter?.name || selectedStudentForFilter?.name || rows[0]?.student_name || 'Student';
     const slug = studentLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     await buildReportPdf(
@@ -266,7 +330,7 @@ export default function GradesPage() {
           <button className="btn btn-secondary" onClick={exportReportPdf} disabled={filteredGrades.length === 0}>
             <FileDown className="w-4 h-4" /> Download Report
           </button>
-          {isAdminOrTeacher && (
+          {(isAdminOrTeacher || isParent) && (
             <button className="btn btn-secondary" onClick={exportSingleStudentReportPdf} disabled={!filterStudent}>
               <FileDown className="w-4 h-4" /> Download Student Report
             </button>
@@ -284,10 +348,14 @@ export default function GradesPage() {
           <option value="">All Classes</option>
           {classOptions.map((c) => <option key={c.value} value={c.value}>{c.name}</option>)}
         </select>
-        {isAdminOrTeacher && (
+        {(isAdminOrTeacher || isParent) && (
           <select className="select" value={filterStudent} onChange={(e) => setFilterStudent(e.target.value)}>
             <option value="">All Students</option>
-            {availableStudentsForFilter.map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
+            {availableStudentsForFilter.map((s) => (
+              <option key={normalizeId((s as Student).id ?? (s as ParentProfile['children'][number]).student_id)} value={normalizeId((s as Student).id ?? (s as ParentProfile['children'][number]).student_id)}>
+                {(s as Student).name ?? (s as ParentProfile['children'][number]).name}
+              </option>
+            ))}
           </select>
         )}
         <select className="select" value={filterTerm} onChange={(e) => setFilterTerm(e.target.value)}>
