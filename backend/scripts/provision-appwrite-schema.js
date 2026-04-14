@@ -317,6 +317,16 @@ const collections = [
   },
 ];
 
+const officialSubjects = [
+  { name: 'English', code: 'ENG' },
+  { name: 'Mathematics', code: 'MATH' },
+  { name: 'Science', code: 'SCI' },
+  { name: 'Social Studies', code: 'SST' },
+  { name: 'Christian Religious Education', code: 'CRE' },
+  { name: 'Islamic Religious Education', code: 'IRE' },
+  { name: 'Swahili', code: 'SWA' },
+];
+
 function isAlreadyExists(error) {
   const msg = String(error?.message || '').toLowerCase();
   const code = Number(error?.code || 0);
@@ -429,6 +439,24 @@ async function ensureAttributes(collection) {
   }
 }
 
+async function seedOfficialSubjects() {
+  const existing = await db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_SUBJECTS, [sdk.Query.limit(100)]);
+  const existingNames = new Set(existing.documents.map((doc) => String(doc.name || '').trim().toLowerCase()));
+
+  for (const subject of officialSubjects) {
+    if (existingNames.has(subject.name.toLowerCase())) {
+      continue;
+    }
+
+    await db.createDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_SUBJECTS, sdk.ID.unique(), {
+      name: subject.name,
+      code: subject.code,
+      created_at: new Date().toISOString(),
+    });
+    console.log(`Seeded official subject: ${subject.name}`);
+  }
+}
+
 async function run() {
   console.log('Provisioning Appwrite schema...');
   await ensureDatabase();
@@ -437,6 +465,8 @@ async function run() {
     await ensureCollection(collection);
     await ensureAttributes(collection);
   }
+
+  await seedOfficialSubjects();
 
   console.log('Done. Appwrite database and collections are provisioned.');
 }

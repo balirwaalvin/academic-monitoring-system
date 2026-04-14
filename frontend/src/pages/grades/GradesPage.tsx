@@ -19,13 +19,8 @@ export default function GradesPage() {
   const [filterType, setFilterType] = useState('');
   const [form, setForm] = useState({
     class_id: '',
-    class_name_manual: '',
     student_id: '',
-    student_name_manual: '',
-    student_number_manual: '',
     subject_id: '',
-    subject_name_manual: '',
-    subject_code_manual: '',
     score: '',
     term: 'Term 1',
     assessment_type: 'exam',
@@ -36,8 +31,8 @@ export default function GradesPage() {
   const normalizeId = (value: unknown): string => String(value ?? '').trim();
 
   const { data: grades = [], isLoading } = useQuery<Grade[]>({
-    queryKey: ['grades', filterStudent, filterTerm, filterType],
-    queryFn: () => gradesApi.list({ student_id: filterStudent, term: filterTerm, assessment_type: filterType }).then((r) => r.data),
+    queryKey: ['grades', filterTerm, filterType],
+    queryFn: () => gradesApi.list({ term: filterTerm, assessment_type: filterType }).then((r) => r.data),
   });
 
   const classesQuery = useQuery<Class[]>({
@@ -107,13 +102,50 @@ export default function GradesPage() {
     return byClass.length ? byClass : subjects;
   }, [subjects, form.class_id, classNameById]);
 
+  const gradeBelongsToStudent = (grade: Grade, student: Student) => {
+    const studentIdCandidates = [
+      (student as Student & { appwrite_id?: unknown }).appwrite_id,
+      student.id,
+      student.student_number,
+      (student as Student & { user_id?: unknown }).user_id,
+    ].map(normalizeId).filter(Boolean);
+
+    const gradeIdCandidates = [
+      grade.student_id,
+      (grade as Grade & { appwrite_id?: unknown }).appwrite_id,
+      grade.student_number,
+    ].map(normalizeId).filter(Boolean);
+
+    if (studentIdCandidates.some((id) => gradeIdCandidates.includes(id))) {
+      return true;
+    }
+
+    const studentName = String(student.name || '').trim().toLowerCase();
+    const gradeName = String(grade.student_name || '').trim().toLowerCase();
+    return !!studentName && studentName === gradeName;
+  };
+
+  const selectedStudentForFilter = students.find((s) => normalizeId(s.id) === filterStudent);
+
   const filteredGrades = grades.filter((g) => {
     const classMatch = !filterClass || (g.class_name && g.class_name === classNameById.get(filterClass));
-    const studentMatch = !filterStudent || normalizeId(g.student_id) === filterStudent;
+    const studentMatch = !filterStudent
+      || (selectedStudentForFilter ? gradeBelongsToStudent(g, selectedStudentForFilter) : normalizeId(g.student_id) === filterStudent);
     const termMatch = !filterTerm || g.term === filterTerm;
     const typeMatch = !filterType || g.assessment_type === filterType;
     return classMatch && studentMatch && termMatch && typeMatch;
   });
+
+  const availableStudentsForFilter = useMemo(() => {
+    if (!filterClass) return students;
+    const selectedClassName = classNameById.get(filterClass) || '';
+    const byClass = students.filter((s) => {
+      const idMatch = normalizeId(s.class_id) === filterClass;
+      const nameMatch = !!selectedClassName && String(s.class_name || '').trim() === selectedClassName;
+      return idMatch || nameMatch;
+    });
+    return byClass.length ? byClass : students;
+  }, [students, filterClass, classNameById]);
 
   const mutation = useMutation({
     mutationFn: (d: {
@@ -136,13 +168,8 @@ export default function GradesPage() {
       setShowModal(false);
       setForm({
         class_id: '',
-        class_name_manual: '',
         student_id: '',
-        student_name_manual: '',
-        student_number_manual: '',
         subject_id: '',
-        subject_name_manual: '',
-        subject_code_manual: '',
         score: '',
         term: 'Term 1',
         assessment_type: 'exam',
@@ -155,30 +182,25 @@ export default function GradesPage() {
     },
   });
 
-  const exportReportPdf = async () => {
-    if (!filteredGrades.length) {
-      toast.error('No grades available for this report');
-      return;
-    }
-
+  const buildReportPdf = async (rows: Grade[], reportTitle: string, filename: string) => {
     const { jsPDF } = await import('jspdf');
     const autoTable = (await import('jspdf-autotable')).default;
     const doc = new jsPDF();
 
     const generatedAt = new Date();
-    const average = filteredGrades.reduce((sum, g) => sum + Number(g.score || 0), 0) / filteredGrades.length;
+    const average = rows.reduce((sum, g) => sum + Number(g.score || 0), 0) / rows.length;
 
     doc.setFontSize(16);
-    doc.text('Academic Grade Report', 14, 16);
+    doc.text(reportTitle, 14, 16);
     doc.setFontSize(10);
     doc.text(`Generated: ${generatedAt.toLocaleString()}`, 14, 24);
-    doc.text(`Total records: ${filteredGrades.length}`, 14, 30);
+    doc.text(`Total records: ${rows.length}`, 14, 30);
     doc.text(`Average score: ${average.toFixed(1)}%`, 14, 36);
 
     autoTable(doc, {
       startY: 42,
       head: [['Student', 'Class', 'Subject', 'Term', 'Type', 'Score', 'Grade', 'Remarks']],
-      body: filteredGrades.map((g) => [
+      body: rows.map((g) => [
         g.student_name || String(g.student_id),
         g.class_name || '-',
         g.subject_name || String(g.subject_id),
@@ -192,8 +214,42 @@ export default function GradesPage() {
       headStyles: { fillColor: [15, 23, 42] },
     });
 
-    const datePart = generatedAt.toISOString().slice(0, 10);
-    doc.save(`grade-report-${datePart}.pdf`);
+    doc.save(filename);
+  };
+
+  const exportReportPdf = async () => {
+    if (!filteredGrades.length) {
+      toast.error('No grades available for this report');
+      return;
+    }
+
+    const datePart = new Date().toISOString().slice(0, 10);
+    await buildReportPdf(filteredGrades, 'Academic Grade Report', `grade-report-${datePart}.pdf`);
+  };
+
+  const exportSingleStudentReportPdf = async () => {
+    if (!filterStudent) {
+      toast.error('Please select one student first');
+      return;
+    }
+
+    const rows = selectedStudentForFilter
+      ? filteredGrades.filter((g) => gradeBelongsToStudent(g, selectedStudentForFilter))
+      : filteredGrades.filter((g) => normalizeId(g.student_id) === filterStudent);
+    if (!rows.length) {
+      toast.error('No grades found for the selected student');
+      return;
+    }
+
+    const datePart = new Date().toISOString().slice(0, 10);
+    const studentLabel = selectedStudentForFilter?.name || rows[0]?.student_name || 'Student';
+    const slug = studentLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    await buildReportPdf(
+      rows,
+      `Student Report - ${studentLabel}`,
+      `student-report-${slug}-${datePart}.pdf`
+    );
   };
 
   const terms = ['Term 1', 'Term 2', 'Term 3'];
@@ -208,8 +264,13 @@ export default function GradesPage() {
         </div>
         <div className="flex gap-2">
           <button className="btn btn-secondary" onClick={exportReportPdf} disabled={filteredGrades.length === 0}>
-            <FileDown className="w-4 h-4" /> Download Report (PDF)
+            <FileDown className="w-4 h-4" /> Download Report
           </button>
+          {isAdminOrTeacher && (
+            <button className="btn btn-secondary" onClick={exportSingleStudentReportPdf} disabled={!filterStudent}>
+              <FileDown className="w-4 h-4" /> Download Student Report
+            </button>
+          )}
           {isAdminOrTeacher && (
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
               <PlusCircle className="w-4 h-4" /> Add Grade
@@ -226,7 +287,7 @@ export default function GradesPage() {
         {isAdminOrTeacher && (
           <select className="select" value={filterStudent} onChange={(e) => setFilterStudent(e.target.value)}>
             <option value="">All Students</option>
-            {students.filter((s) => !filterClass || normalizeId(s.class_id) === filterClass).map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
+            {availableStudentsForFilter.map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
           </select>
         )}
         <select className="select" value={filterTerm} onChange={(e) => setFilterTerm(e.target.value)}>
@@ -284,22 +345,17 @@ export default function GradesPage() {
             const selectedStudent = students.find((s) => normalizeId(s.id) === form.student_id);
             const selectedSubject = subjects.find((s) => normalizeId(s.id) === form.subject_id);
             const scoreNum = Number(form.score);
-            const className = selectedClass?.name || form.class_name_manual.trim();
-            const studentName = selectedStudent?.name || form.student_name_manual.trim();
-            const subjectName = selectedSubject?.name || form.subject_name_manual.trim();
-            const subjectCode = selectedSubject?.code || form.subject_code_manual.trim();
-            const studentNumber = selectedStudent?.student_number || form.student_number_manual.trim();
 
-            if (!className) {
-              toast.error('Class is required. Select one or type it manually.');
+            if (!selectedClass) {
+              toast.error('Class is required. Please select a class.');
               return;
             }
-            if (!studentName) {
-              toast.error('Student is required. Select one or type it manually.');
+            if (!selectedStudent) {
+              toast.error('Student is required. Please select a student.');
               return;
             }
-            if (!subjectName) {
-              toast.error('Subject is required. Select one or type it manually.');
+            if (!selectedSubject) {
+              toast.error('Subject is required. Please select a subject.');
               return;
             }
             if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
@@ -315,11 +371,11 @@ export default function GradesPage() {
               assessment_type: form.assessment_type,
               notes: form.remarks,
               academic_year: '2025/2026',
-              class_name: className,
-              student_name: studentName,
-              subject_name: subjectName,
-              subject_code: subjectCode || undefined,
-              student_number: studentNumber || undefined,
+              class_name: selectedClass.name,
+              student_name: selectedStudent.name,
+              subject_name: selectedSubject.name,
+              subject_code: selectedSubject.code,
+              student_number: selectedStudent.student_number,
             });
           }}
           className="space-y-4"
@@ -330,14 +386,7 @@ export default function GradesPage() {
               <option value="">Select class...</option>
               {classOptions.map((c) => <option key={c.value} value={c.value}>{c.name}</option>)}
             </select>
-            <input
-              type="text"
-              className="input w-full mt-2"
-              placeholder="Or type class name manually"
-              value={form.class_name_manual}
-              onChange={(e) => setForm((f) => ({ ...f, class_name_manual: e.target.value }))}
-            />
-            {classOptions.length === 0 && <p className="text-xs text-amber-600 mt-1">No classes found. Type class name manually.</p>}
+            {classOptions.length === 0 && <p className="text-xs text-amber-600 mt-1">No classes found.</p>}
           </div>
 
           <div>
@@ -346,20 +395,6 @@ export default function GradesPage() {
               <option value="">Select student...</option>
               {availableStudentsForModal.map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
             </select>
-            <input
-              type="text"
-              className="input w-full mt-2"
-              placeholder="Or type student name manually"
-              value={form.student_name_manual}
-              onChange={(e) => setForm((f) => ({ ...f, student_name_manual: e.target.value }))}
-            />
-            <input
-              type="text"
-              className="input w-full mt-2"
-              placeholder="Student number (optional)"
-              value={form.student_number_manual}
-              onChange={(e) => setForm((f) => ({ ...f, student_number_manual: e.target.value }))}
-            />
           </div>
 
           <div>
@@ -368,20 +403,6 @@ export default function GradesPage() {
               <option value="">Select subject...</option>
               {availableSubjectsForModal.map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
             </select>
-            <input
-              type="text"
-              className="input w-full mt-2"
-              placeholder="Or type subject name manually"
-              value={form.subject_name_manual}
-              onChange={(e) => setForm((f) => ({ ...f, subject_name_manual: e.target.value }))}
-            />
-            <input
-              type="text"
-              className="input w-full mt-2"
-              placeholder="Subject code (optional)"
-              value={form.subject_code_manual}
-              onChange={(e) => setForm((f) => ({ ...f, subject_code_manual: e.target.value }))}
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

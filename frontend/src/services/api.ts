@@ -75,6 +75,35 @@ const listCollection = async (collectionId: string, params?: Record<string, stri
   return applyFilters(normalized, params);
 };
 
+const officialSubjects = [
+  { name: 'English', code: 'ENG' },
+  { name: 'Mathematics', code: 'MATH' },
+  { name: 'Science', code: 'SCI' },
+  { name: 'Social Studies', code: 'SST' },
+  { name: 'Christian Religious Education', code: 'CRE' },
+  { name: 'Islamic Religious Education', code: 'IRE' },
+  { name: 'Swahili', code: 'SWA' },
+];
+
+const seedOfficialSubjectsIfMissing = async (): Promise<void> => {
+  ensureAppwriteConfigured();
+  const existing = await listAllDocuments(appwrite.collections.subjects);
+  const existingNames = new Set(existing.map((doc) => String(doc.name || '').trim().toLowerCase()));
+
+  const missingSubjects = officialSubjects.filter((subject) => !existingNames.has(subject.name.toLowerCase()));
+  if (!missingSubjects.length) return;
+
+  await Promise.all(
+    missingSubjects.map((subject) =>
+      createIn(appwrite.collections.subjects, {
+        name: subject.name,
+        code: subject.code,
+        created_at: new Date().toISOString(),
+      })
+    )
+  );
+};
+
 const getById = async (collectionId: string, id: EntityId): Promise<Loose> => {
   ensureAppwriteConfigured();
   const doc = await appwrite.databases.getDocument(appwrite.databaseId, collectionId, String(id));
@@ -352,7 +381,19 @@ export const classesApi = {
   list: async (): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.classes)),
   getSubjects: async (id: EntityId): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.subjects, { class_id: String(id) })),
   getStudents: async (id: EntityId): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.students, { class_id: String(id) })),
-  allSubjects: async (): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.subjects)),
+  allSubjects: async (): ApiResult<Loose[]> => {
+    try {
+      await seedOfficialSubjectsIfMissing();
+    } catch (error: any) {
+      const message = String(error?.message || '').toLowerCase();
+      if (!message.includes('permission') && !message.includes('create')) {
+        throw error;
+      }
+      // If the current session cannot seed, still fall back to the existing list.
+    }
+
+    return ok(await listCollection(appwrite.collections.subjects));
+  },
   create: async (data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.classes, data)),
   createSubject: async (classId: EntityId, data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.subjects, { ...data, class_id: classId })),
 };
