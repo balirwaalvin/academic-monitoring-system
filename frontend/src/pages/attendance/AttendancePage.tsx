@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { attendanceApi, studentsApi, classesApi } from '../../services/api';
 import { CheckSquare, ClipboardList } from 'lucide-react';
@@ -13,13 +13,17 @@ type Status = typeof STATUS_OPTIONS[number];
 
 export default function AttendancePage() {
   const { user } = useAuth();
+  const isAdminOrTeacher = ['admin', 'teacher'].includes(user?.role || '');
   const qc = useQueryClient();
   const [filterDate, setFilterDate] = useState('');
   const [filterStudent, setFilterStudent] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkClassId, setBulkClassId] = useState('');
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0]);
-  const [bulkStatuses, setBulkStatuses] = useState<Record<number, Status>>({});
+  const [bulkStatuses, setBulkStatuses] = useState<Record<string, Status>>({});
+
+  const normalizeId = (value: unknown): string => String(value ?? '').trim();
+  const normalizeName = (value: unknown): string => String(value ?? '').trim().toLowerCase();
 
   const { data: records = [], isLoading } = useQuery<AttendanceRecord[]>({
     queryKey: ['attendance', filterDate, filterStudent],
@@ -27,9 +31,9 @@ export default function AttendancePage() {
   });
 
   const { data: students = [] } = useQuery<Student[]>({
-    queryKey: ['students', bulkClassId],
-    queryFn: () => studentsApi.list({ class_id: bulkClassId }).then(r => r.data),
-    enabled: !!bulkClassId,
+    queryKey: ['students-bulk-attendance'],
+    queryFn: () => studentsApi.list({}).then(r => r.data),
+    enabled: isAdminOrTeacher,
   });
 
   const { data: classes = [] } = useQuery({
@@ -42,6 +46,46 @@ export default function AttendancePage() {
     queryFn: () => studentsApi.list({}).then(r => r.data),
     enabled: ['admin', 'teacher'].includes(user?.role || ''),
   });
+
+  const classOptions = useMemo(() => {
+    if (classes.length > 0) {
+      return classes.map((c: any) => ({
+        value: normalizeId(c.id),
+        name: String(c.name || `Class ${c.id}`),
+      }));
+    }
+
+    const fallback = new Map<string, { value: string; name: string }>();
+    students.forEach((student) => {
+      const classId = normalizeId(student.class_id);
+      const className = String(student.class_name || '').trim();
+      if (classId) {
+        fallback.set(classId, { value: classId, name: className || `Class ${classId}` });
+      } else if (className) {
+        const synthetic = `name:${className}`;
+        fallback.set(synthetic, { value: synthetic, name: className });
+      }
+    });
+    return [...fallback.values()];
+  }, [classes, students]);
+
+  const classNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    classOptions.forEach((c) => map.set(c.value, c.name));
+    classes.forEach((c: any) => map.set(normalizeId(c.id), String(c.name || '')));
+    return map;
+  }, [classOptions, classes]);
+
+  const availableStudentsForBulk = useMemo(() => {
+    if (!bulkClassId) return [];
+
+    const selectedClassName = classNameById.get(bulkClassId) || (bulkClassId.startsWith('name:') ? bulkClassId.slice(5) : '');
+    return students.filter((student) => {
+      const idMatch = normalizeId(student.class_id) === bulkClassId;
+      const nameMatch = selectedClassName && normalizeName(student.class_name) === normalizeName(selectedClassName);
+      return idMatch || nameMatch;
+    });
+  }, [students, bulkClassId, classNameById]);
 
   const bulkMutation = useMutation({
     mutationFn: (payload: object[]) => attendanceApi.record(payload),
@@ -56,15 +100,16 @@ export default function AttendancePage() {
 
   const handleBulkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const records = students.map(s => ({
-      student_id: s.id,
+    const records = availableStudentsForBulk.map(s => ({
+      student_id: Number.isNaN(Number(s.id)) ? undefined : Number(s.id),
+      student_name: s.name,
+      student_number: s.student_number,
+      class_name: s.class_name || classNameById.get(bulkClassId) || '',
       date: bulkDate,
-      status: bulkStatuses[s.id] || 'present',
+      status: bulkStatuses[normalizeId(s.id)] || 'present',
     }));
     bulkMutation.mutate(records);
   };
-
-  const isAdminOrTeacher = ['admin', 'teacher'].includes(user?.role || '');
 
   return (
     <div className="space-y-5">
@@ -132,7 +177,7 @@ export default function AttendancePage() {
               <label className="block text-sm font-medium mb-1">Class</label>
               <select className="select w-full" required value={bulkClassId} onChange={e => { setBulkClassId(e.target.value); setBulkStatuses({}); }}>
                 <option value="">Select class...</option>
-                {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classOptions.map((c) => <option key={c.value} value={c.value}>{c.name}</option>)}
               </select>
             </div>
             <div>
@@ -141,42 +186,44 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {bulkClassId && students.length > 0 && (
+          {bulkClassId && availableStudentsForBulk.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-slate-700 mb-2">{students.length} Students</p>
+              <p className="text-sm font-medium text-slate-700 mb-2">{availableStudentsForBulk.length} Students</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {students.map(s => (
-                  <div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50">
+                {availableStudentsForBulk.map(s => {
+                  const sid = normalizeId(s.id);
+                  return (
+                  <div key={sid} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50">
                     <span className="text-sm font-medium">{s.name}</span>
                     <div className="flex gap-2">
                       {STATUS_OPTIONS.map(st => (
                         <label key={st} className={`text-xs cursor-pointer px-2.5 py-1 rounded-full border transition-colors ${
-                          (bulkStatuses[s.id] || 'present') === st
+                          (bulkStatuses[sid] || 'present') === st
                             ? st === 'present' ? 'bg-green-500 text-white border-green-500'
                               : st === 'absent' ? 'bg-red-500 text-white border-red-500'
                               : st === 'late' ? 'bg-amber-500 text-white border-amber-500'
                               : 'bg-blue-500 text-white border-blue-500'
                             : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
                         }`}>
-                          <input type="radio" className="sr-only" name={`status-${s.id}`} value={st}
-                            checked={(bulkStatuses[s.id] || 'present') === st}
-                            onChange={() => setBulkStatuses(prev => ({ ...prev, [s.id]: st }))} />
+                          <input type="radio" className="sr-only" name={`status-${sid}`} value={st}
+                            checked={(bulkStatuses[sid] || 'present') === st}
+                            onChange={() => setBulkStatuses(prev => ({ ...prev, [sid]: st }))} />
                           {st.charAt(0).toUpperCase() + st.slice(1)}
                         </label>
                       ))}
                     </div>
                   </div>
-                ))}
+                );})}
               </div>
             </div>
           )}
 
-          {bulkClassId && students.length === 0 && (
+          {bulkClassId && availableStudentsForBulk.length === 0 && (
             <p className="text-sm text-slate-400 text-center py-4">No students in this class</p>
           )}
 
           <div className="flex gap-2 pt-2">
-            <button type="submit" className="btn btn-primary flex-1" disabled={!bulkClassId || students.length === 0 || bulkMutation.isPending}>
+            <button type="submit" className="btn btn-primary flex-1" disabled={!bulkClassId || availableStudentsForBulk.length === 0 || bulkMutation.isPending}>
               {bulkMutation.isPending ? 'Saving...' : 'Submit Attendance'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setShowBulkModal(false)}>Cancel</button>

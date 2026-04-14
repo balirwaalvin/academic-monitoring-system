@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { studentsApi, gradesApi, feesApi, attendanceApi, alertsApi } from '../../services/api';
 import StatCard from '../../components/common/StatCard';
@@ -20,6 +20,27 @@ export default function ParentDashboard() {
     queryKey: ['grade-summary', firstChildId],
     queryFn: () => gradesApi.summary(firstChildId!).then(r => r.data),
     enabled: !!firstChildId,
+  });
+
+  const childAverageQueries = useQueries({
+    queries: children.map((child) => ({
+      queryKey: ['grade-summary', 'child-average', child.student_id],
+      queryFn: () => gradesApi.summary(child.student_id).then((r) => r.data as GradeSummary[]),
+      enabled: !!child.student_id,
+    })),
+  });
+
+  const childAverages = children.map((child, index) => {
+    const summary = childAverageQueries[index]?.data || [];
+    const average = summary.length
+      ? Math.round(summary.reduce((sum, item) => sum + Number(item.overall_avg || 0), 0) / summary.length)
+      : 0;
+
+    return {
+      ...child,
+      average,
+      hasData: summary.length > 0,
+    };
   });
 
   const { data: fees } = useQuery<Fee[]>({
@@ -81,6 +102,28 @@ export default function ParentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-800">Student Averages</h3>
+            <button onClick={() => navigate('/grades')} className="text-xs text-primary-600 hover:underline">Open grades</button>
+          </div>
+          <div className="space-y-2">
+            {childAverages.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-4">No linked child found</p>
+            ) : childAverages.map((child) => (
+              <div key={child.student_id} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">{child.name}</p>
+                  <p className="text-xs text-slate-500">{child.class_name || 'Class not set'}</p>
+                </div>
+                <p className={`text-sm font-semibold ${child.hasData ? 'text-blue-700' : 'text-slate-400'}`}>
+                  {child.hasData ? `${child.average}%` : 'No data'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Subject Performance */}
         <div className="card p-5">
           <h3 className="font-semibold text-slate-800 mb-4">Subject Performance</h3>

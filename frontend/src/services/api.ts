@@ -201,6 +201,97 @@ const buildRoleProfile = async (user: Loose | null): Promise<Loose | null> => {
   return null;
 };
 
+const normalizeScopeValue = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+
+const getParentChildrenForScope = async (): Promise<Loose[] | null> => {
+  let user: Loose | null = null;
+  try {
+    user = await getCurrentProfile();
+  } catch {
+    return null;
+  }
+
+  if (!user || user.role !== 'parent') {
+    return null;
+  }
+
+  let parentProfile: Loose | null = null;
+  try {
+    parentProfile = await buildRoleProfile(user);
+  } catch {
+    return [];
+  }
+
+  return Array.isArray(parentProfile?.children) ? parentProfile.children : [];
+};
+
+const scopeToParentChildren = (
+  rows: Loose[],
+  children: Loose[] | null,
+  fields: { idField: string; studentNumberField: string; studentNameField: string }
+): Loose[] => {
+  if (children === null) return rows;
+  if (!children.length) return [];
+
+  return rows.filter((row) => {
+    const rowId = normalizeScopeValue(row[fields.idField]);
+    const rowStudentNumber = normalizeScopeValue(row[fields.studentNumberField]);
+    const rowStudentName = normalizeScopeValue(row[fields.studentNameField]);
+
+    return children.some((child) => {
+      const childId = normalizeScopeValue(child.student_id);
+      const childStudentNumber = normalizeScopeValue(child.student_number);
+      const childName = normalizeScopeValue(child.name);
+      return (
+        (childId && childId === rowId)
+        || (childStudentNumber && childStudentNumber === rowStudentNumber)
+        || (childName && childName === rowStudentName)
+      );
+    });
+  });
+};
+
+const isRowInParentScope = (
+  row: Loose,
+  children: Loose[] | null,
+  fields: { idField: string; studentNumberField: string; studentNameField: string }
+): boolean => {
+  return scopeToParentChildren([row], children, fields).length > 0;
+};
+
+const matchesChildIdentity = (row: Loose, child: Loose, fields: { idField: string; studentNumberField: string; studentNameField: string }): boolean => {
+  const rowId = normalizeScopeValue(row[fields.idField]);
+  const rowStudentNumber = normalizeScopeValue(row[fields.studentNumberField]);
+  const rowStudentName = normalizeScopeValue(row[fields.studentNameField]);
+
+  const childId = normalizeScopeValue(child.student_id);
+  const childStudentNumber = normalizeScopeValue(child.student_number);
+  const childName = normalizeScopeValue(child.name);
+
+  return (
+    (!!childId && childId === rowId)
+    || (!!childStudentNumber && childStudentNumber === rowStudentNumber)
+    || (!!childName && childName === rowStudentName)
+  );
+};
+
+const filterRowsForStudent = (
+  rows: Loose[],
+  studentId: EntityId,
+  children: Loose[] | null,
+  fields: { idField: string; studentNumberField: string; studentNameField: string }
+): Loose[] => {
+  const normalizedStudentId = normalizeScopeValue(studentId);
+
+  if (children !== null) {
+    const child = children.find((c) => normalizeScopeValue(c.student_id) === normalizedStudentId);
+    if (!child) return [];
+    return rows.filter((row) => matchesChildIdentity(row, child, fields));
+  }
+
+  return rows.filter((row) => normalizeScopeValue(row[fields.idField]) === normalizedStudentId);
+};
+
 const currentUserId = async (): Promise<EntityId | null> => {
   const profile = await getCurrentProfile();
   return profile?.id ?? null;
@@ -253,6 +344,7 @@ export const authApi = {
 
 export const studentsApi = {
   list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const parentChildren = await getParentChildrenForScope();
     const [students, classes] = await Promise.all([
       listCollection(appwrite.collections.students, params),
       listCollection(appwrite.collections.classes),
@@ -286,15 +378,26 @@ export const studentsApi = {
       };
     });
 
-    if (updates.length) {
+    if (updates.length && parentChildren === null) {
       await Promise.allSettled(updates);
     }
 
-    return ok(withClass);
+    return ok(
+      scopeToParentChildren(withClass, parentChildren, {
+        idField: 'id',
+        studentNumberField: 'student_number',
+        studentNameField: 'name',
+      })
+    );
   },
 
   get: async (id: EntityId): ApiResult<Loose> => {
+    const parentChildren = await getParentChildrenForScope();
     const student = await getById(appwrite.collections.students, id);
+    if (!isRowInParentScope(student, parentChildren, { idField: 'id', studentNumberField: 'student_number', studentNameField: 'name' })) {
+      throw new Error('Unauthorized access to this student record.');
+    }
+
     if (!student.class_name && student.class_id !== undefined && student.class_id !== null) {
       try {
         const klass = await getById(appwrite.collections.classes, student.class_id);
@@ -401,54 +504,25 @@ export const classesApi = {
 export const gradesApi = {
   list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
     const grades = await listCollection(appwrite.collections.grades, params);
-
-    let user: Loose | null = null;
-    try {
-      user = await getCurrentProfile();
-    } catch {
-      return ok(grades);
-    }
-
-    if (!user || user.role !== 'parent') {
-      return ok(grades);
-    }
-
-    let parentProfile: Loose | null = null;
-    try {
-      parentProfile = await buildRoleProfile(user);
-    } catch {
-      return ok([]);
-    }
-
-    const children = Array.isArray(parentProfile?.children) ? parentProfile.children : [];
-    if (!children.length) {
-      return ok([]);
-    }
-
-    const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
-
-    const scopedGrades = grades.filter((grade) => {
-      const gradeStudentId = normalize(grade.student_id);
-      const gradeStudentNumber = normalize(grade.student_number);
-      const gradeStudentName = normalize(grade.student_name);
-
-      return children.some((child: Loose) => {
-        const childId = normalize(child.student_id);
-        const childStudentNumber = normalize(child.student_number);
-        const childName = normalize(child.name);
-        return (
-          (childId && childId === gradeStudentId)
-          || (childStudentNumber && childStudentNumber === gradeStudentNumber)
-          || (childName && childName === gradeStudentName)
-        );
-      });
-    });
-
-    return ok(scopedGrades);
+    const parentChildren = await getParentChildrenForScope();
+    return ok(
+      scopeToParentChildren(grades, parentChildren, {
+        idField: 'student_id',
+        studentNumberField: 'student_number',
+        studentNameField: 'student_name',
+      })
+    );
   },
 
   summary: async (studentId: EntityId): ApiResult<Loose[]> => {
-    const grades = await listCollection(appwrite.collections.grades, { student_id: String(studentId) });
+    const parentChildren = await getParentChildrenForScope();
+    const scopedGrades = (await gradesApi.list()).data;
+    const grades = filterRowsForStudent(scopedGrades, studentId, parentChildren, {
+      idField: 'student_id',
+      studentNumberField: 'student_number',
+      studentNameField: 'student_name',
+    });
+
     const bySubject = new Map<string, Loose[]>();
 
     grades.forEach((grade) => {
@@ -548,10 +622,27 @@ export const gradesApi = {
 };
 
 export const attendanceApi = {
-  list: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.attendance, params)),
+  list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const rows = await listCollection(appwrite.collections.attendance, params);
+    const parentChildren = await getParentChildrenForScope();
+    return ok(
+      scopeToParentChildren(rows, parentChildren, {
+        idField: 'student_id',
+        studentNumberField: 'student_number',
+        studentNameField: 'student_name',
+      })
+    );
+  },
 
   stats: async (studentId: EntityId): ApiResult<Loose> => {
-    const records = await listCollection(appwrite.collections.attendance, { student_id: String(studentId) });
+    const parentChildren = await getParentChildrenForScope();
+    const scopedAttendance = (await attendanceApi.list()).data;
+    const records = filterRowsForStudent(scopedAttendance, studentId, parentChildren, {
+      idField: 'student_id',
+      studentNumberField: 'student_number',
+      studentNameField: 'student_name',
+    });
+
     const overall = { total_days: records.length, present: 0, absent: 0, late: 0, excused: 0 };
     const recentMap = new Map<string, number>();
 
@@ -575,11 +666,40 @@ export const attendanceApi = {
     const created = [];
 
     for (const row of payload as Loose[]) {
-      const doc = await createIn(appwrite.collections.attendance, {
-        ...row,
-        recorded_by: userId,
+      const rawStudentId = row.student_id;
+      const numericStudentId = Number(rawStudentId);
+      const hasNumericStudentId = rawStudentId !== undefined && rawStudentId !== null && !Number.isNaN(numericStudentId);
+
+      const numericRecordedBy = Number(userId);
+      const hasNumericRecordedBy = userId !== undefined && userId !== null && !Number.isNaN(numericRecordedBy);
+
+      // Keep attendance writes compatible with Appwrite schema (integer IDs + declared fields only).
+      const safeRow: Loose = {
+        date: String(row.date || new Date().toISOString().slice(0, 10)),
+        status: String(row.status || 'present'),
+        notes: row.notes !== undefined && row.notes !== null ? String(row.notes) : undefined,
+        student_name: row.student_name ? String(row.student_name) : undefined,
+        student_number: row.student_number ? String(row.student_number) : undefined,
+        class_name: row.class_name ? String(row.class_name) : undefined,
+        recorded_by_name: row.recorded_by_name ? String(row.recorded_by_name) : undefined,
         recorded_at: new Date().toISOString(),
+      };
+
+      if (hasNumericStudentId) {
+        safeRow.student_id = numericStudentId;
+      }
+
+      if (hasNumericRecordedBy) {
+        safeRow.recorded_by = numericRecordedBy;
+      }
+
+      Object.keys(safeRow).forEach((key) => {
+        if (safeRow[key] === undefined || safeRow[key] === null || safeRow[key] === '') {
+          delete safeRow[key];
+        }
       });
+
+      const doc = await createIn(appwrite.collections.attendance, safeRow);
       created.push(doc);
     }
 
@@ -590,10 +710,20 @@ export const attendanceApi = {
 };
 
 export const feesApi = {
-  list: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.fees, params)),
+  list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const rows = await listCollection(appwrite.collections.fees, params);
+    const parentChildren = await getParentChildrenForScope();
+    return ok(
+      scopeToParentChildren(rows, parentChildren, {
+        idField: 'student_id',
+        studentNumberField: 'student_number',
+        studentNameField: 'student_name',
+      })
+    );
+  },
 
   summary: async (): ApiResult<Loose> => {
-    const fees = await listCollection(appwrite.collections.fees);
+    const fees = (await feesApi.list()).data;
     const totals = fees.reduce(
       (acc, fee) => {
         acc.total_billed += Number(fee.amount || 0);
@@ -621,10 +751,30 @@ export const feesApi = {
 };
 
 export const wellbeingApi = {
-  list: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.wellbeing, params)),
+  list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const rows = await listCollection(appwrite.collections.wellbeing, params);
+    const parentChildren = await getParentChildrenForScope();
+    return ok(
+      scopeToParentChildren(rows, parentChildren, {
+        idField: 'student_id',
+        studentNumberField: 'student_number',
+        studentNameField: 'student_name',
+      })
+    );
+  },
   create: async (data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.wellbeing, data)),
   update: async (id: EntityId, data: Loose): ApiResult<Loose> => ok(await updateIn(appwrite.collections.wellbeing, id, data)),
-  behaviorList: async (params?: Record<string, string>): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.behavior, params)),
+  behaviorList: async (params?: Record<string, string>): ApiResult<Loose[]> => {
+    const rows = await listCollection(appwrite.collections.behavior, params);
+    const parentChildren = await getParentChildrenForScope();
+    return ok(
+      scopeToParentChildren(rows, parentChildren, {
+        idField: 'student_id',
+        studentNumberField: 'student_number',
+        studentNameField: 'student_name',
+      })
+    );
+  },
   createBehavior: async (data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.behavior, data)),
 };
 
@@ -849,8 +999,15 @@ export const analyticsApi = {
 export const alertsApi = {
   list: async (params?: Record<string, string>): ApiResult<Loose[]> => {
     const rows = await listCollection(appwrite.collections.alerts, params);
+    const parentChildren = await getParentChildrenForScope();
+    const scoped = scopeToParentChildren(rows, parentChildren, {
+      idField: 'student_id',
+      studentNumberField: 'student_number',
+      studentNameField: 'student_name',
+    });
+
     return ok(
-      rows.map((r) => ({
+      scoped.map((r) => ({
         ...r,
         resolved: Boolean(r.resolved ?? r.is_resolved),
         resolution_notes: r.resolution_notes ?? r.notes,
