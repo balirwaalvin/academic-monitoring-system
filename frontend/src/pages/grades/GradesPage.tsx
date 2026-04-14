@@ -308,8 +308,8 @@ export default function GradesPage() {
             }
 
             mutation.mutate({
-              student_id: selectedStudent ? Number(selectedStudent.id) : undefined,
-              subject_id: selectedSubject ? Number(selectedSubject.id) : undefined,
+              student_id: selectedStudent ? selectedStudent.id : undefined,
+              subject_id: selectedSubject ? selectedSubject.id : undefined,
               score: scoreNum,
               term: form.term,
               assessment_type: form.assessment_type,

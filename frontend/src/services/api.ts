@@ -403,13 +403,6 @@ export const gradesApi = {
     const studentId = hasStudentId ? Number(data.student_id) : undefined;
     const subjectId = hasSubjectId ? Number(data.subject_id) : undefined;
 
-    if (hasStudentId && Number.isNaN(studentId)) {
-      throw new Error('Invalid student selected.');
-    }
-    if (hasSubjectId && Number.isNaN(subjectId)) {
-      throw new Error('Invalid subject selected.');
-    }
-
     if (!hasStudentId && !data.student_name) {
       throw new Error('Student is required. Select one or enter a name manually.');
     }
@@ -423,8 +416,6 @@ export const gradesApi = {
 
     // Keep only attributes that exist in the Appwrite grades schema.
     const payload: Loose = {
-      student_id: studentId,
-      subject_id: subjectId,
       score,
       max_score: maxScore,
       grade_letter: data.grade_letter || computedGradeLetter,
@@ -443,6 +434,14 @@ export const gradesApi = {
 
     if (typeof userId === 'number' && !Number.isNaN(userId)) {
       payload.recorded_by = userId;
+    }
+
+    if (studentId !== undefined && !Number.isNaN(studentId)) {
+      payload.student_id = studentId;
+    }
+
+    if (subjectId !== undefined && !Number.isNaN(subjectId)) {
+      payload.subject_id = subjectId;
     }
 
     Object.keys(payload).forEach((key) => {
