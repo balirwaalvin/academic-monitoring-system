@@ -48,6 +48,10 @@ const applyFilters = (items: Loose[], params?: Record<string, string>): Loose[] 
         return String(resolved) === String(value);
       }
 
+      if (key === 'status') {
+        return sameValue(item.status, value) || sameValue(item.payment_status, value);
+      }
+
       return sameValue(item[key], value);
     });
   });
@@ -736,7 +740,63 @@ export const feesApi = {
   },
 
   payments: async (feeId: EntityId): ApiResult<Loose[]> => ok(await listCollection(appwrite.collections.feePayments, { fee_id: String(feeId) })),
-  create: async (data: Loose): ApiResult<Loose> => ok(await createIn(appwrite.collections.fees, data)),
+  create: async (data: Loose): ApiResult<Loose> => {
+    if (data.student_id === undefined || data.student_id === null || String(data.student_id).trim() === '') {
+      throw new Error('Student is required when creating a fee record.');
+    }
+    if (!String(data.fee_type || '').trim()) {
+      throw new Error('Fee type is required.');
+    }
+    if (!String(data.term || '').trim()) {
+      throw new Error('Term is required.');
+    }
+    if (!String(data.due_date || '').trim()) {
+      throw new Error('Due date is required.');
+    }
+
+    const amount = Number(data.amount);
+    if (Number.isNaN(amount) || amount <= 0) {
+      throw new Error('Amount must be a valid number greater than 0.');
+    }
+
+    const students = await listCollection(appwrite.collections.students);
+    const studentRef = String(data.student_id);
+    const student = students.find((item) => String(item.id) === studentRef || String(item.appwrite_id || '') === studentRef);
+
+    if (!student) {
+      throw new Error('Selected student was not found. Refresh and try again.');
+    }
+
+    const numericStudentId = Number(student.id);
+
+    const payload: Loose = {
+      fee_type: String(data.fee_type),
+      amount,
+      due_date: String(data.due_date),
+      term: String(data.term),
+      academic_year: String(data.academic_year || '2025/2026'),
+      description: data.description ? String(data.description) : undefined,
+      amount_paid: 0,
+      balance: amount,
+      payment_status: 'pending',
+      student_name: student.name ? String(student.name) : undefined,
+      student_number: student.student_number ? String(student.student_number) : undefined,
+      class_name: student.class_name ? String(student.class_name) : undefined,
+      created_at: new Date().toISOString(),
+    };
+
+    if (!Number.isNaN(numericStudentId)) {
+      payload.student_id = numericStudentId;
+    }
+
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === undefined || payload[key] === null || payload[key] === '') {
+        delete payload[key];
+      }
+    });
+
+    return ok(await createIn(appwrite.collections.fees, payload));
+  },
 
   recordPayment: async (feeId: EntityId, data: Loose): ApiResult<Loose> => {
     const payment = await createIn(appwrite.collections.feePayments, { ...data, fee_id: feeId, payment_date: data.payment_date || new Date().toISOString() });

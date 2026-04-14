@@ -50,7 +50,10 @@ export default function FeesPage() {
       setShowFeeModal(false);
       setFeeForm({ student_id: '', fee_type: 'tuition', amount: '', term: 'Term 1', due_date: '', description: '' });
     },
-    onError: () => toast.error('Failed to create fee'),
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to create fee';
+      toast.error(message);
+    },
   });
 
   const totalAmount = fees.reduce((s, f) => s + f.amount, 0);
@@ -226,7 +229,7 @@ export default function FeesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Due Date</label>
-              <input type="date" className="input w-full" value={feeForm.due_date} onChange={e => setFeeForm(f => ({ ...f, due_date: e.target.value }))} />
+              <input type="date" className="input w-full" required value={feeForm.due_date} onChange={e => setFeeForm(f => ({ ...f, due_date: e.target.value }))} />
             </div>
           </div>
           <div>
