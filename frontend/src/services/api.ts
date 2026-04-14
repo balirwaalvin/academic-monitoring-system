@@ -392,7 +392,66 @@ export const gradesApi = {
 
   create: async (data: Loose): ApiResult<Loose> => {
     const userId = await currentUserId();
-    return ok(await createIn(appwrite.collections.grades, { ...data, recorded_by: userId, recorded_at: new Date().toISOString() }));
+    const score = Number(data.score);
+    if (Number.isNaN(score)) {
+      throw new Error('Score must be a valid number.');
+    }
+
+    const hasStudentId = data.student_id !== undefined && data.student_id !== null && String(data.student_id).trim() !== '';
+    const hasSubjectId = data.subject_id !== undefined && data.subject_id !== null && String(data.subject_id).trim() !== '';
+
+    const studentId = hasStudentId ? Number(data.student_id) : undefined;
+    const subjectId = hasSubjectId ? Number(data.subject_id) : undefined;
+
+    if (hasStudentId && Number.isNaN(studentId)) {
+      throw new Error('Invalid student selected.');
+    }
+    if (hasSubjectId && Number.isNaN(subjectId)) {
+      throw new Error('Invalid subject selected.');
+    }
+
+    if (!hasStudentId && !data.student_name) {
+      throw new Error('Student is required. Select one or enter a name manually.');
+    }
+    if (!hasSubjectId && !data.subject_name) {
+      throw new Error('Subject is required. Select one or enter a name manually.');
+    }
+
+    const maxScore = Number(data.max_score || 100) || 100;
+    const scorePercent = (score / maxScore) * 100;
+    const computedGradeLetter = scorePercent >= 80 ? 'A' : scorePercent >= 70 ? 'B' : scorePercent >= 60 ? 'C' : scorePercent >= 50 ? 'D' : 'F';
+
+    // Keep only attributes that exist in the Appwrite grades schema.
+    const payload: Loose = {
+      student_id: studentId,
+      subject_id: subjectId,
+      score,
+      max_score: maxScore,
+      grade_letter: data.grade_letter || computedGradeLetter,
+      term: String(data.term || 'Term 1'),
+      academic_year: String(data.academic_year || '2025/2026'),
+      assessment_type: String(data.assessment_type || 'exam'),
+      notes: String(data.notes || ''),
+      recorded_at: new Date().toISOString(),
+      subject_name: data.subject_name ? String(data.subject_name) : undefined,
+      subject_code: data.subject_code ? String(data.subject_code) : undefined,
+      student_name: data.student_name ? String(data.student_name) : undefined,
+      student_number: data.student_number ? String(data.student_number) : undefined,
+      class_name: data.class_name ? String(data.class_name) : undefined,
+      recorded_by_name: data.recorded_by_name ? String(data.recorded_by_name) : undefined,
+    };
+
+    if (typeof userId === 'number' && !Number.isNaN(userId)) {
+      payload.recorded_by = userId;
+    }
+
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === undefined || payload[key] === null) {
+        delete payload[key];
+      }
+    });
+
+    return ok(await createIn(appwrite.collections.grades, payload));
   },
 
   update: async (id: EntityId, data: Loose): ApiResult<Loose> => ok(await updateIn(appwrite.collections.grades, id, data)),

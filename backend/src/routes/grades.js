@@ -1,4 +1,5 @@
 ﻿const express = require('express');
+const PDFDocument = require('pdfkit');
 const { getDb } = require('../database/db');
 const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
@@ -7,7 +8,7 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
   try {
     const db = await getDb();
-    const { student_id, subject_id, term, academic_year, assessment_type } = req.query;
+    const { class_id, student_id, subject_id, term, academic_year, assessment_type } = req.query;
     let query = `
       SELECT g.*, s.name as subject_name, s.code as subject_code,
              u.name as student_name, st.student_number,
@@ -34,6 +35,7 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     if (student_id) { query += ' AND g.student_id = ?'; params.push(student_id); }
+    if (class_id) { query += ' AND st.class_id = ?'; params.push(class_id); }
     if (subject_id) { query += ' AND g.subject_id = ?'; params.push(subject_id); }
     if (term) { query += ' AND g.term = ?'; params.push(term); }
     if (academic_year) { query += ' AND g.academic_year = ?'; params.push(academic_year); }
@@ -42,6 +44,84 @@ router.get('/', authenticate, async (req, res) => {
     query += ' ORDER BY g.recorded_at DESC';
     res.json(await db.all(query, params));
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/grades/report/pdf
+router.get('/report/pdf', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { class_id, student_id, subject_id, term, academic_year, assessment_type } = req.query;
+
+    let query = `
+      SELECT g.*, s.name as subject_name, s.code as subject_code,
+             u.name as student_name, st.student_number,
+             c.name as class_name
+      FROM grades g
+      JOIN subjects s ON g.subject_id = s.id
+      JOIN students st ON g.student_id = st.id
+      JOIN users u ON st.user_id = u.id
+      LEFT JOIN classes c ON st.class_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (student_id) { query += ' AND g.student_id = ?'; params.push(student_id); }
+    if (class_id) { query += ' AND st.class_id = ?'; params.push(class_id); }
+    if (subject_id) { query += ' AND g.subject_id = ?'; params.push(subject_id); }
+    if (term) { query += ' AND g.term = ?'; params.push(term); }
+    if (academic_year) { query += ' AND g.academic_year = ?'; params.push(academic_year); }
+    if (assessment_type) { query += ' AND g.assessment_type = ?'; params.push(assessment_type); }
+
+    query += ' ORDER BY u.name, g.term, s.name, g.recorded_at DESC';
+    const grades = await db.all(query, params);
+
+    const scoreSum = grades.reduce((sum, row) => sum + Number(row.score || 0), 0);
+    const average = grades.length ? (scoreSum / grades.length) : 0;
+    const groupedByTerm = grades.reduce((acc, row) => {
+      acc[row.term] = acc[row.term] || [];
+      acc[row.term].push(row);
+      return acc;
+    }, {});
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="grade-report-${new Date().toISOString().slice(0, 10)}.pdf"`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    doc.pipe(res);
+
+    doc.fontSize(18).text('Academic Grade Report', { align: 'left' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`);
+    doc.text(`Term scope: ${term || 'All Terms'}`);
+    doc.text(`Total records: ${grades.length}`);
+    doc.text(`Average score: ${average.toFixed(1)}%`);
+    doc.moveDown();
+
+    doc.fontSize(12).text('Summary by Term');
+    Object.entries(groupedByTerm).forEach(([termName, rows]) => {
+      const termAvg = rows.length
+        ? rows.reduce((sum, row) => sum + Number(row.score || 0), 0) / rows.length
+        : 0;
+      doc.fontSize(10).text(`${termName}: ${rows.length} record(s), avg ${termAvg.toFixed(1)}%`);
+    });
+
+    doc.moveDown();
+    doc.fontSize(12).text('Detailed Grades');
+    doc.moveDown(0.5);
+
+    grades.forEach((row, idx) => {
+      const line = `${idx + 1}. ${row.student_name} | ${row.class_name || '-'} | ${row.subject_name} | ${row.term} | ${row.assessment_type} | ${row.score}% (${row.grade_letter || '-'})`;
+      doc.fontSize(9).text(line);
+      if (row.notes) {
+        doc.fillColor('#555555').text(`   Notes: ${row.notes}`).fillColor('#000000');
+      }
+      if (doc.y > 760) doc.addPage();
+    });
+
+    doc.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/grades/summary/:studentId

@@ -1,51 +1,200 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { gradesApi, studentsApi, classesApi } from '../../services/api';
-import { PlusCircle, BookOpen } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileDown, PlusCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Modal from '../../components/common/Modal';
 import { GradeBadge } from '../../components/common/Badge';
 import { useAuth } from '../../contexts/AuthContext';
-import toast from 'react-hot-toast';
-import type { Grade, Student, Subject, Class } from '../../types';
+import { classesApi, gradesApi, studentsApi } from '../../services/api';
+import type { Class, Grade, Student, Subject } from '../../types';
 
 export default function GradesPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
+
   const [showModal, setShowModal] = useState(false);
+  const [filterClass, setFilterClass] = useState('');
   const [filterStudent, setFilterStudent] = useState('');
   const [filterTerm, setFilterTerm] = useState('');
   const [filterType, setFilterType] = useState('');
-  const [form, setForm] = useState({ student_id: '', subject_id: '', score: '', term: 'Term 1', assessment_type: 'exam', remarks: '' });
+  const [form, setForm] = useState({
+    class_id: '',
+    class_name_manual: '',
+    student_id: '',
+    student_name_manual: '',
+    student_number_manual: '',
+    subject_id: '',
+    subject_name_manual: '',
+    subject_code_manual: '',
+    score: '',
+    term: 'Term 1',
+    assessment_type: 'exam',
+    remarks: '',
+  });
+
+  const isAdminOrTeacher = ['admin', 'teacher'].includes(user?.role || '');
+  const normalizeId = (value: unknown): string => String(value ?? '').trim();
 
   const { data: grades = [], isLoading } = useQuery<Grade[]>({
     queryKey: ['grades', filterStudent, filterTerm, filterType],
-    queryFn: () => gradesApi.list({ student_id: filterStudent, term: filterTerm, assessment_type: filterType }).then(r => r.data),
+    queryFn: () => gradesApi.list({ student_id: filterStudent, term: filterTerm, assessment_type: filterType }).then((r) => r.data),
   });
+
+  const classesQuery = useQuery<Class[]>({
+    queryKey: ['classes'],
+    queryFn: () => classesApi.list().then((r) => r.data),
+  });
+  const classes = classesQuery.data || [];
 
   const { data: students = [] } = useQuery<Student[]>({
     queryKey: ['students'],
-    queryFn: () => studentsApi.list({}).then(r => r.data),
-    enabled: ['admin', 'teacher'].includes(user?.role || ''),
+    queryFn: () => studentsApi.list({}).then((r) => r.data),
+    enabled: isAdminOrTeacher,
   });
 
   const { data: subjects = [] } = useQuery<Subject[]>({
     queryKey: ['subjects-all'],
-    queryFn: () => classesApi.allSubjects().then(r => r.data),
+    queryFn: () => classesApi.allSubjects().then((r) => r.data),
+  });
+
+  useEffect(() => {
+    if (classesQuery.isError) {
+      toast.error('Failed to load classes. Check classes data and permissions.');
+    }
+  }, [classesQuery.isError]);
+
+  const classOptions = useMemo(() => {
+    if (classes.length > 0) {
+      return classes.map((klass) => ({ value: normalizeId(klass.id), name: klass.name || `Class ${klass.id}` }));
+    }
+
+    const fallback = new Map<string, { value: string; name: string }>();
+    students.forEach((student) => {
+      const classId = normalizeId(student.class_id);
+      if (!classId) return;
+      const className = student.class_name || `Class ${classId}`;
+      if (!fallback.has(classId)) fallback.set(classId, { value: classId, name: className });
+    });
+    return [...fallback.values()];
+  }, [classes, students]);
+
+  const classNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    classOptions.forEach((option) => map.set(option.value, option.name));
+    classes.forEach((klass) => map.set(normalizeId(klass.id), klass.name));
+    return map;
+  }, [classOptions, classes]);
+
+  const availableStudentsForModal = useMemo(() => {
+    if (!form.class_id) return students;
+    const selectedClassName = classNameById.get(form.class_id) || '';
+    const byClass = students.filter((s) => {
+      const idMatch = normalizeId(s.class_id) === form.class_id;
+      const nameMatch = !!selectedClassName && String(s.class_name || '').trim() === selectedClassName;
+      return idMatch || nameMatch;
+    });
+    return byClass.length ? byClass : students;
+  }, [students, form.class_id, classNameById]);
+
+  const availableSubjectsForModal = useMemo(() => {
+    if (!form.class_id) return subjects;
+    const selectedClassName = classNameById.get(form.class_id) || '';
+    const byClass = subjects.filter((s) => {
+      const idMatch = normalizeId(s.class_id) === form.class_id;
+      const nameMatch = !!selectedClassName && String(s.class_name || '').trim() === selectedClassName;
+      return idMatch || nameMatch;
+    });
+    return byClass.length ? byClass : subjects;
+  }, [subjects, form.class_id, classNameById]);
+
+  const filteredGrades = grades.filter((g) => {
+    const classMatch = !filterClass || (g.class_name && g.class_name === classNameById.get(filterClass));
+    const studentMatch = !filterStudent || normalizeId(g.student_id) === filterStudent;
+    const termMatch = !filterTerm || g.term === filterTerm;
+    const typeMatch = !filterType || g.assessment_type === filterType;
+    return classMatch && studentMatch && termMatch && typeMatch;
   });
 
   const mutation = useMutation({
-    mutationFn: (d: typeof form) => gradesApi.create(d),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['grades'] }); toast.success('Grade recorded'); setShowModal(false); setForm({ student_id: '', subject_id: '', score: '', term: 'Term 1', assessment_type: 'exam', remarks: '' }); },
-    onError: () => toast.error('Failed to record grade'),
+    mutationFn: (d: {
+      student_id?: number;
+      subject_id?: number;
+      score: number;
+      term: string;
+      assessment_type: string;
+      notes: string;
+      academic_year: string;
+      class_name?: string;
+      student_name?: string;
+      subject_name?: string;
+      subject_code?: string;
+      student_number?: string;
+    }) => gradesApi.create(d),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grades'] });
+      toast.success('Grade recorded successfully');
+      setShowModal(false);
+      setForm({
+        class_id: '',
+        class_name_manual: '',
+        student_id: '',
+        student_name_manual: '',
+        student_number_manual: '',
+        subject_id: '',
+        subject_name_manual: '',
+        subject_code_manual: '',
+        score: '',
+        term: 'Term 1',
+        assessment_type: 'exam',
+        remarks: '',
+      });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to record grade';
+      toast.error(message);
+    },
   });
 
-  const isAdminOrTeacher = ['admin', 'teacher'].includes(user?.role || '');
+  const exportReportPdf = async () => {
+    if (!filteredGrades.length) {
+      toast.error('No grades available for this report');
+      return;
+    }
 
-  const filteredGrades = grades.filter(g =>
-    (!filterStudent || g.student_id === parseInt(filterStudent)) &&
-    (!filterTerm || g.term === filterTerm) &&
-    (!filterType || g.assessment_type === filterType)
-  );
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+    const doc = new jsPDF();
+
+    const generatedAt = new Date();
+    const average = filteredGrades.reduce((sum, g) => sum + Number(g.score || 0), 0) / filteredGrades.length;
+
+    doc.setFontSize(16);
+    doc.text('Academic Grade Report', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${generatedAt.toLocaleString()}`, 14, 24);
+    doc.text(`Total records: ${filteredGrades.length}`, 14, 30);
+    doc.text(`Average score: ${average.toFixed(1)}%`, 14, 36);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [['Student', 'Class', 'Subject', 'Term', 'Type', 'Score', 'Grade', 'Remarks']],
+      body: filteredGrades.map((g) => [
+        g.student_name || String(g.student_id),
+        g.class_name || '-',
+        g.subject_name || String(g.subject_id),
+        g.term,
+        g.assessment_type,
+        `${g.score}%`,
+        g.grade_letter || '',
+        g.notes || '',
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [15, 23, 42] },
+    });
+
+    const datePart = generatedAt.toISOString().slice(0, 10);
+    doc.save(`grade-report-${datePart}.pdf`);
+  };
 
   const terms = ['Term 1', 'Term 2', 'Term 3'];
   const types = ['exam', 'quiz', 'assignment', 'project', 'midterm'];
@@ -57,35 +206,42 @@ export default function GradesPage() {
           <h1 className="text-xl font-bold text-slate-800">Grades</h1>
           <p className="text-sm text-slate-500">{filteredGrades.length} records</p>
         </div>
-        {isAdminOrTeacher && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            <PlusCircle className="w-4 h-4" /> Add Grade
+        <div className="flex gap-2">
+          <button className="btn btn-secondary" onClick={exportReportPdf} disabled={filteredGrades.length === 0}>
+            <FileDown className="w-4 h-4" /> Download Report (PDF)
           </button>
-        )}
+          {isAdminOrTeacher && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              <PlusCircle className="w-4 h-4" /> Add Grade
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Filters */}
       <div className="card p-4 flex flex-wrap gap-3">
+        <select className="select" value={filterClass} onChange={(e) => { setFilterClass(e.target.value); setFilterStudent(''); }}>
+          <option value="">All Classes</option>
+          {classOptions.map((c) => <option key={c.value} value={c.value}>{c.name}</option>)}
+        </select>
         {isAdminOrTeacher && (
-          <select className="select" value={filterStudent} onChange={e => setFilterStudent(e.target.value)}>
+          <select className="select" value={filterStudent} onChange={(e) => setFilterStudent(e.target.value)}>
             <option value="">All Students</option>
-            {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {students.filter((s) => !filterClass || normalizeId(s.class_id) === filterClass).map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
           </select>
         )}
-        <select className="select" value={filterTerm} onChange={e => setFilterTerm(e.target.value)}>
+        <select className="select" value={filterTerm} onChange={(e) => setFilterTerm(e.target.value)}>
           <option value="">All Terms</option>
-          {terms.map(t => <option key={t} value={t}>{t}</option>)}
+          {terms.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select className="select" value={filterType} onChange={e => setFilterType(e.target.value)}>
+        <select className="select" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
           <option value="">All Types</option>
-          {types.map(t => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+          {types.map((t) => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
         </select>
-        {(filterStudent || filterTerm || filterType) && (
-          <button className="btn btn-secondary" onClick={() => { setFilterStudent(''); setFilterTerm(''); setFilterType(''); }}>Clear</button>
+        {(filterClass || filterStudent || filterTerm || filterType) && (
+          <button className="btn btn-secondary" onClick={() => { setFilterClass(''); setFilterStudent(''); setFilterTerm(''); setFilterType(''); }}>Clear</button>
         )}
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50">
@@ -104,7 +260,7 @@ export default function GradesPage() {
               <tr><td colSpan={7} className="table-td text-center text-slate-400">Loading...</td></tr>
             ) : filteredGrades.length === 0 ? (
               <tr><td colSpan={7} className="table-td text-center text-slate-400 py-8">No grade records found</td></tr>
-            ) : filteredGrades.map(g => (
+            ) : filteredGrades.map((g) => (
               <tr key={g.id} className="hover:bg-slate-50">
                 <td className="table-td font-medium">{g.student_name}</td>
                 <td className="table-td">{g.subject_name}</td>
@@ -112,52 +268,147 @@ export default function GradesPage() {
                 <td className="table-td capitalize">{g.assessment_type}</td>
                 <td className="table-td font-semibold">{g.score}%</td>
                 <td className="table-td"><GradeBadge grade={g.grade_letter || ''} score={g.score} /></td>
-                <td className="table-td text-slate-500 text-sm">{g.notes || '—'}</td>
+                <td className="table-td text-slate-500 text-sm">{g.notes || '-'}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Add Grade Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Record Grade" size="sm">
-        <form onSubmit={e => { e.preventDefault(); mutation.mutate(form); }} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+
+            const selectedClass = classOptions.find((c) => c.value === form.class_id);
+            const selectedStudent = students.find((s) => normalizeId(s.id) === form.student_id);
+            const selectedSubject = subjects.find((s) => normalizeId(s.id) === form.subject_id);
+            const scoreNum = Number(form.score);
+            const className = selectedClass?.name || form.class_name_manual.trim();
+            const studentName = selectedStudent?.name || form.student_name_manual.trim();
+            const subjectName = selectedSubject?.name || form.subject_name_manual.trim();
+            const subjectCode = selectedSubject?.code || form.subject_code_manual.trim();
+            const studentNumber = selectedStudent?.student_number || form.student_number_manual.trim();
+
+            if (!className) {
+              toast.error('Class is required. Select one or type it manually.');
+              return;
+            }
+            if (!studentName) {
+              toast.error('Student is required. Select one or type it manually.');
+              return;
+            }
+            if (!subjectName) {
+              toast.error('Subject is required. Select one or type it manually.');
+              return;
+            }
+            if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+              toast.error('Score must be between 0 and 100');
+              return;
+            }
+
+            mutation.mutate({
+              student_id: selectedStudent ? Number(selectedStudent.id) : undefined,
+              subject_id: selectedSubject ? Number(selectedSubject.id) : undefined,
+              score: scoreNum,
+              term: form.term,
+              assessment_type: form.assessment_type,
+              notes: form.remarks,
+              academic_year: '2025/2026',
+              class_name: className,
+              student_name: studentName,
+              subject_name: subjectName,
+              subject_code: subjectCode || undefined,
+              student_number: studentNumber || undefined,
+            });
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-sm font-medium mb-1">Class</label>
+            <select className="select w-full" value={form.class_id} onChange={(e) => setForm((f) => ({ ...f, class_id: e.target.value, student_id: '', subject_id: '' }))}>
+              <option value="">Select class...</option>
+              {classOptions.map((c) => <option key={c.value} value={c.value}>{c.name}</option>)}
+            </select>
+            <input
+              type="text"
+              className="input w-full mt-2"
+              placeholder="Or type class name manually"
+              value={form.class_name_manual}
+              onChange={(e) => setForm((f) => ({ ...f, class_name_manual: e.target.value }))}
+            />
+            {classOptions.length === 0 && <p className="text-xs text-amber-600 mt-1">No classes found. Type class name manually.</p>}
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Student</label>
-            <select className="select w-full" required value={form.student_id} onChange={e => setForm(f => ({ ...f, student_id: e.target.value }))}>
+            <select className="select w-full" value={form.student_id} onChange={(e) => setForm((f) => ({ ...f, student_id: e.target.value }))}>
               <option value="">Select student...</option>
-              {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {availableStudentsForModal.map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
             </select>
+            <input
+              type="text"
+              className="input w-full mt-2"
+              placeholder="Or type student name manually"
+              value={form.student_name_manual}
+              onChange={(e) => setForm((f) => ({ ...f, student_name_manual: e.target.value }))}
+            />
+            <input
+              type="text"
+              className="input w-full mt-2"
+              placeholder="Student number (optional)"
+              value={form.student_number_manual}
+              onChange={(e) => setForm((f) => ({ ...f, student_number_manual: e.target.value }))}
+            />
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Subject</label>
-            <select className="select w-full" required value={form.subject_id} onChange={e => setForm(f => ({ ...f, subject_id: e.target.value }))}>
+            <select className="select w-full" value={form.subject_id} onChange={(e) => setForm((f) => ({ ...f, subject_id: e.target.value }))}>
               <option value="">Select subject...</option>
-              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {availableSubjectsForModal.map((s) => <option key={s.id} value={normalizeId(s.id)}>{s.name}</option>)}
             </select>
+            <input
+              type="text"
+              className="input w-full mt-2"
+              placeholder="Or type subject name manually"
+              value={form.subject_name_manual}
+              onChange={(e) => setForm((f) => ({ ...f, subject_name_manual: e.target.value }))}
+            />
+            <input
+              type="text"
+              className="input w-full mt-2"
+              placeholder="Subject code (optional)"
+              value={form.subject_code_manual}
+              onChange={(e) => setForm((f) => ({ ...f, subject_code_manual: e.target.value }))}
+            />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1">Term</label>
-              <select className="select w-full" value={form.term} onChange={e => setForm(f => ({ ...f, term: e.target.value }))}>
-                {terms.map(t => <option key={t} value={t}>{t}</option>)}
+              <select className="select w-full" value={form.term} onChange={(e) => setForm((f) => ({ ...f, term: e.target.value }))}>
+                {terms.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Type</label>
-              <select className="select w-full" value={form.assessment_type} onChange={e => setForm(f => ({ ...f, assessment_type: e.target.value }))}>
-                {types.map(t => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+              <select className="select w-full" value={form.assessment_type} onChange={(e) => setForm((f) => ({ ...f, assessment_type: e.target.value }))}>
+                {types.map((t) => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
               </select>
             </div>
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Score (%)</label>
-            <input type="number" min="0" max="100" step="0.5" className="input w-full" required value={form.score} onChange={e => setForm(f => ({ ...f, score: e.target.value }))} />
+            <input type="number" min="0" max="100" step="0.5" className="input w-full" required value={form.score} onChange={(e) => setForm((f) => ({ ...f, score: e.target.value }))} />
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Remarks</label>
-            <input type="text" className="input w-full" placeholder="Optional comments" value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} />
+            <input type="text" className="input w-full" placeholder="Optional comments" value={form.remarks} onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))} />
           </div>
+
           <div className="flex gap-2 pt-2">
             <button type="submit" className="btn btn-primary flex-1" disabled={mutation.isPending}>
               {mutation.isPending ? 'Saving...' : 'Save Grade'}

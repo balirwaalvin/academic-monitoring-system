@@ -84,6 +84,7 @@ export interface Subject {
 export interface Grade {
   id: number;
   student_id: number;
+  class_id?: number;
   subject_id: number;
   score: number;
   max_score: number;
